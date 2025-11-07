@@ -11,7 +11,7 @@ const Start = () => {
   
   return (
     <ThemedView style={styles.container}>
-      <ThemedText >Start a Session!</ThemedText>
+      <ThemedText heading>Start a Session</ThemedText>
     </ThemedView>
   )
 }

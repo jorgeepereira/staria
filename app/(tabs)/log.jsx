@@ -11,7 +11,7 @@ const Log = () => {
   
   return (
     <ThemedView style={styles.container}>
-      <ThemedText >Welcome to the Log!</ThemedText>
+      <ThemedText heading={true}>Welcome to the Log</ThemedText>
     </ThemedView>
   )
 }

@@ -1,5 +1,10 @@
 {
   "expo": {
+    "extra": {
+      "APPWRITE_ENDPOINT": "https://nyc.cloud.appwrite.io/v1",
+      "APPWRITE_PROJECT_ID": "690e3847000e5afad9fe",
+      "APPWRITE_PLATFORM": "dev.jorge.staria"  // bundle/app id
+    },
     "name": "staria",
     "slug": "staria",
     "version": "1.0.0",

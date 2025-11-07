@@ -11,7 +11,7 @@ const Strategy = () => {
   
   return (
     <ThemedView style={styles.container}>
-      <ThemedText >Welcome to Strategy!</ThemedText>
+      <ThemedText heading>Welcome to Strategy</ThemedText>
     </ThemedView>
   )
 }

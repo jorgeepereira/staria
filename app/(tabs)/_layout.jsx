@@ -1,15 +1,26 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { useColorScheme } from "react-native";
+import { useAuth } from "../../contexts/AuthContext.jsx";
 
 
 // themes
 import { darkTheme, lightTheme } from "../../constants/theme.js";
 
 const TabLayout = () => {
+  // theme logic
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+
+  // auth logic
+  const { user } = useAuth();
   
+  if (!user) {
+    // aka if a user is NOT already logged in (null), send them to (auth)
+    return <Redirect href={'/login'}/>
+  }
+  
+  // if the user check passes, render all of the tabs content 
   return (
     <Tabs screenOptions={{ 
       headerShown: false,
