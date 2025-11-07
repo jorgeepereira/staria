@@ -1,0 +1,71 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+import { useColorScheme } from "react-native";
+
+
+// themes
+import { darkTheme, lightTheme } from "../../constants/theme.js";
+
+const TabLayout = () => {
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  
+  return (
+    <Tabs screenOptions={{ 
+      headerShown: false,
+      tabBarStyle: {
+        backgroundColor: theme.background,
+        borderTopColor: theme.textSecondary,
+        paddingTop: 10,
+        height: 80,
+      },
+      tabBarActiveTintColor: theme.text,
+      tabBarInactiveTintColor: theme.textSecondary,
+      }}>
+      
+      <Tabs.Screen 
+        name="index" 
+        options={{ title: "Dashboard", tabBarIcon: ({ focused }) =>
+        <MaterialCommunityIcons 
+          name={focused ? 'view-dashboard' : 'view-dashboard-outline'}
+          size={24} 
+          color={focused ? theme.text : theme.textSecondary}
+        />}}
+      />
+
+      <Tabs.Screen 
+        name="log" 
+        options={{ title: "Log", tabBarIcon: ({ focused }) => 
+          <MaterialCommunityIcons 
+            size={24}
+            name={focused ? 'clipboard-text' : 'clipboard-text-outline'}
+            color={focused ? theme.text : theme.textSecondary}
+          />}}
+      />
+      
+
+      <Tabs.Screen 
+        name="strategy" 
+        options={{ title: "Strategy", tabBarIcon: ({ focused }) =>
+        <MaterialCommunityIcons 
+          name={'strategy'}
+          size={24} 
+          color={focused ? theme.text : theme.textSecondary}
+        />}}
+      />
+
+      <Tabs.Screen 
+        name="start" 
+        options={{ title: "Start", tabBarIcon: ({ focused }) =>
+        <MaterialCommunityIcons 
+          name={focused ? 'plus-box' : 'plus'}
+          size={28} 
+          color={focused ? theme.text : theme.textSecondary}
+        />}}
+      />
+
+    </Tabs>
+  )
+}
+
+export default TabLayout
