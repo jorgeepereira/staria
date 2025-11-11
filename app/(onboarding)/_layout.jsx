@@ -1,13 +1,12 @@
-import { Stack } from "expo-router";
-import { useColorScheme } from "react-native";
+import { Stack } from 'expo-router';
+import { useColorScheme } from 'react-native';
 import { darkTheme, lightTheme } from '../../constants/theme';
 
-
-export default function AuthLayout() {
+export default function OnboardingLayout() {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
- return (
+  return (
     <Stack
       screenOptions={{
         headerShown: false,
@@ -16,8 +15,9 @@ export default function AuthLayout() {
         },
       }}
     >
-      <Stack.Screen name="login" />
-      <Stack.Screen name="register" />
+      <Stack.Screen name="onboarding-1" />
+      <Stack.Screen name="onboarding-2" />
+      <Stack.Screen name="onboarding-3" />
     </Stack>
   );
 }

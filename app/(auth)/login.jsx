@@ -1,7 +1,7 @@
 import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Keyboard, StyleSheet, Text, TouchableWithoutFeedback, useColorScheme } from 'react-native';
+import { Keyboard, StyleSheet, Text, TouchableWithoutFeedback, useColorScheme, View } from 'react-native';
 import { useAuth } from "../../contexts/AuthContext.jsx";
 
 // themed components
@@ -53,7 +53,14 @@ const Login = () => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <ThemedView style={styles.container}>
-          <ThemedText style={styles.heading}>Sign in to your Account</ThemedText>
+
+          {/* Staria Logo and Heading */}
+          <View style={styles.logoContainer}>
+            <ThemedText style={styles.stariaHeading}>Staria</ThemedText>
+          </View>
+
+          <Spacer />
+          <ThemedText style={styles.subHeading}>Sign in to your Account</ThemedText>
 
           <ThemedText>
             Don't have an account? <Link href={"/register"}><ThemedText style={styles.link}>Sign Up</ThemedText></Link>
@@ -115,14 +122,26 @@ const getStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  stariaHeading: {
+    fontSize: 40,
+    fontWeight: '900',
+    marginBottom: 8,
+    color: theme.accent,
+    letterSpacing: 1.5,
+  },
   link: {
     color: theme.accent,
     marginVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: theme.text,
   },
-  heading: {
-    fontSize: 28,
+  subHeading: {
+    fontSize: 24,
     fontWeight: '800',
     marginBottom: 6,
   },

@@ -48,6 +48,8 @@ const Register = () => {
         setLocalError("An account with this email already exists.")
       } else {
         setLocalError('Could not register. Please try again.');
+        console.log(error);
+        
       }
     } finally {
       setSubmitting(false);
