@@ -18,6 +18,7 @@ const Dashboard = () => {
   const styles = getStyles(theme);
 
   const { signOut, user} = useAuth();
+
   const [ profile, setProfile] = useState(null);
 
   // load the profile
@@ -45,10 +46,10 @@ const Dashboard = () => {
       <ThemedText heading={true}>Dashboard</ThemedText>
       <Spacer />
 
-      <ThemedText>Name: {profile?.displayName || '—'}</ThemedText>
-      <ThemedText>Units: {profile?.units || '—'}</ThemedText>
-      <ThemedText>Height (cm): {profile?.height || '—'}</ThemedText>
-      <ThemedText>Weight (kg): {profile?.weight || '—'}</ThemedText>
+      <ThemedText>Name: {profile?.displayName || '-'}</ThemedText>
+      <ThemedText>Units: {profile?.units || '-'}</ThemedText>
+      <ThemedText>Height (cm): {profile?.height || '-'}</ThemedText>
+      <ThemedText>Weight (kg): {profile?.weight || '-'}</ThemedText>
 
       <Spacer />
       <ThemedText secondary={true}>{user.email}</ThemedText>

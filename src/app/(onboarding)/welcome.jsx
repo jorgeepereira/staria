@@ -75,7 +75,7 @@ const WelcomeScreen = () => {
               color: theme.accent,
             }}
           > 
-            Tap the screen to begin.
+            TAP!
           </ThemedText>
         </Animated.View>
 

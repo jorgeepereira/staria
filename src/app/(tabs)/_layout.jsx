@@ -23,7 +23,10 @@ const TabLayout = () => {
   // if the user check passes, render all of the tabs content 
   return (
     <Tabs screenOptions={{ 
-      headerShown: false,
+      headerShown: true,
+      headerStyle: { backgroundColor: theme.background },
+      headerTintColor: theme.text,
+      headerTitleStyle: { fontFamily: 'Orbitron', fontWeight: 'bold' },
       tabBarStyle: {
         backgroundColor: theme.background,
         borderTopColor: theme.textSecondary,
@@ -36,7 +39,9 @@ const TabLayout = () => {
       
       <Tabs.Screen 
         name="index" 
-        options={{ title: "Dashboard", tabBarIcon: ({ focused }) =>
+        options={{ 
+          title: "Dashboard", 
+          tabBarIcon: ({ focused }) =>
         <MaterialCommunityIcons 
           name={focused ? 'view-dashboard' : 'view-dashboard-outline'}
           size={24} 
