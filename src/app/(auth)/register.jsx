@@ -1,16 +1,16 @@
+import { useAuth } from "@/contexts/AuthContext.jsx";
 import { AntDesign, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Keyboard, StyleSheet, Text, TouchableWithoutFeedback, useColorScheme } from 'react-native';
-import { useAuth } from "../../contexts/AuthContext.jsx";
+import { Keyboard, StyleSheet, Text, TouchableWithoutFeedback, useColorScheme, View } from 'react-native';
 
 // themed components
-import Spacer from '../../components/spacer.jsx';
-import ThemedButton from '../../components/themed-button.jsx';
-import ThemedText from '../../components/themed-text.jsx';
-import ThemedTextInput from '../../components/themed-textInput.jsx';
-import ThemedView from '../../components/themed-view.jsx';
-import { darkTheme, lightTheme } from '../../constants/theme.js';
+import Spacer from '@/components/spacer.jsx';
+import ThemedButton from '@/components/themed-button.jsx';
+import ThemedText from '@/components/themed-text.jsx';
+import ThemedTextInput from '@/components/themed-textInput.jsx';
+import ThemedView from '@/components/themed-view.jsx';
+import { darkTheme, lightTheme } from '@/constants/theme.js';
 
 const Register = () => {
   // theme logic
@@ -59,6 +59,31 @@ const Register = () => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <ThemedView style={styles.container}>
+
+          <ThemedView>
+            <ThemedText style={{
+              fontFamily: 'Orbitron',
+              fontWeight: '700',
+              fontSize: 52,
+              color: theme.text,
+              letterSpacing: 1.5,
+            }}>
+              Staria
+            </ThemedText>
+
+            {/* Underline */}
+            <View
+              style={{
+                width: 220, // adjust to match text width
+                height: 5,
+                backgroundColor: theme.accent,
+                borderRadius: 1,
+                marginBottom: 40,
+              }}
+            />
+          </ThemedView>
+          
+          <Spacer />
           <ThemedText style={styles.heading}>Create an Account</ThemedText>
 
           <ThemedText>
@@ -120,6 +145,7 @@ const getStyles = (theme) => StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 80,
   },
   link: {
     color: theme.accent,
@@ -149,7 +175,7 @@ const getStyles = (theme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: 12,
-    backgroundColor: (theme.background === '#121212' && theme.textInput) ? theme.textInput : theme.background,
+    backgroundColor: theme.textInput,
   },
   inputIcon: {
     marginRight: 8,

@@ -9,6 +9,7 @@ export default function NavGate() {
   const router = useRouter();
   const segments = useSegments();
 
+  
   useEffect(() => {
     if (loading) return; // if loading, do nothing
 
@@ -22,16 +23,16 @@ export default function NavGate() {
       router.replace("/login");
     } else if ( user && isNewUser && !inOnboardingGroup) {
       // user is logged in but new, and not in onboarding group, redirect to onboarding
-      router.replace("/onboarding-1");
+      router.replace("/welcome");
     } else if (user && !isNewUser && !inTabsGroup) {
       // user is logged in and not new, and not in tabs group, redirect to main app
       router.replace("/(tabs)");
     }
-    }, 100); // setTimeout to avoid navigation flashing onboarding screen
+    }, 100); // a timetout to avoid navigation flashing onboarding screen
 
     return () => clearTimeout(navigationTimeout);
   }, [user, loading, segments]);
-
+ 
   if (loading) {
     return (
       <ThemedView>

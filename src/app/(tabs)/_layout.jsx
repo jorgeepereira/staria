@@ -1,11 +1,11 @@
+import { useAuth } from "@/contexts/AuthContext.jsx";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Redirect, Tabs } from "expo-router";
 import { useColorScheme } from "react-native";
-import { useAuth } from "../../contexts/AuthContext.jsx";
 
 
 // themes
-import { darkTheme, lightTheme } from "../../constants/theme.js";
+import { darkTheme, lightTheme } from "@/constants/theme.js";
 
 const TabLayout = () => {
   // theme logic

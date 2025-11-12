@@ -1,5 +1,5 @@
 import { ActivityIndicator, useColorScheme } from 'react-native'
-import { darkTheme, lightTheme } from '../constants/theme'
+import { darkTheme, lightTheme } from '../constants/theme.js'
 
 import ThemedView from './themed-view.jsx'
 

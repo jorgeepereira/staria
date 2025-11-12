@@ -1,5 +1,5 @@
-import { Client, Account, Databases, Storage, Avatars } from 'react-native-appwrite';
-import Constants from 'expo-constants'
+import Constants from 'expo-constants';
+import { Account, Avatars, Client, Databases, Storage } from 'react-native-appwrite';
 
 const { APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID, APPWRITE_PLATFORM } =
   Constants.expoConfig?.extra ?? {};
@@ -10,8 +10,9 @@ const client = new Client()
   .setPlatform?.(APPWRITE_PLATFORM)
 
 const account = new Account(client);
-const databaes = new Databases(client);
+const databases = new Databases(client);
 const storage = new Storage(client);
 const avatars = new Avatars(client);
 
-export { account, databaes, storage, avatars };
+export { account, avatars, databases, storage };
+
