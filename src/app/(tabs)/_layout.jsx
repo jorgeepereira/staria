@@ -80,6 +80,11 @@ const TabLayout = () => {
         />}}
       />
 
+      <Tabs.Screen 
+        name="active-workout"
+        options={{ title: "Active Workout", href: null }}
+      />
+
     </Tabs>
   )
 }
