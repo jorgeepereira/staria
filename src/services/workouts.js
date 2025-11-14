@@ -34,7 +34,7 @@ export async function startWorkout({ userId }) {
 // Add a new set
 // Creates a single "set" document linked to a specific workout and exercise. 
 // This is the bridge between workouts and exercises: each set has workoutId + exerciseId.
-export async function addSet({
+export async function createSet({
   userId,
   workoutId,
   exerciseId,
@@ -42,6 +42,7 @@ export async function addSet({
   reps,
   weight = null,
   rpe = null,
+  completed = false,
   notes = '',
 }) {
   // create the setData payload to pass to the database
@@ -53,6 +54,7 @@ export async function addSet({
     reps,
     weight,
     rpe,
+    completed,
     notes,
   };
 
@@ -144,7 +146,7 @@ export async function getWorkoutWithSets({ workoutId, userId }) {
   );
 
   // Fetch all sets associated with this workout
-  const sets = await databases.listDocuments(
+  const setsRes = await databases.listDocuments(
     DB_ID,
     SETS_COLLECTION_ID,
     [
@@ -154,10 +156,26 @@ export async function getWorkoutWithSets({ workoutId, userId }) {
     ]
   );
 
-  const setsDoc = sets.documents;
+  const sets = setsRes.documents;
   
   return {
     workout,
-    setsDoc
+    sets
   };
+}
+
+// fetch sets by workout id
+export async function getSetsByWorkoutId(workoutId) {
+  const setsRes = await databases.listDocuments(
+    DB_ID,
+    SETS_COLLECTION_ID,
+    [
+      Query.equal("workoutId", workoutId),
+      Query.orderAsc("order"),
+    ]
+  );
+
+  const sets = setsRes.documents;
+
+  return sets;
 }

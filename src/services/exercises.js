@@ -4,6 +4,7 @@ import { ID, Permission, Query, Role } from "react-native-appwrite";
 const DB_ID = "6910e46a00308ce05924";
 const EXERCISES_COLLECTION_ID = "exercises";
 
+
 // Create a new exercise for a specific user
 export async function createExercise({ 
   userId,
@@ -32,6 +33,7 @@ export async function createExercise({
     exerciseData,
     [
       Permission.read(Role.user(userId)),
+      Permission.write(Role.user(userId)),
       Permission.update(Role.user(userId)),
       Permission.delete(Role.user(userId)),
     ]
@@ -76,7 +78,7 @@ export async function getExerciseById(exerciseId) {
 
 // Fetch all exercises for a specific user
 // Returns a list of all exercises belonging to the user
-export async function getExercisesByUserId({ userId, searchItem = '', limit = 100 }) {
+export async function getExercisesByUserId({ userId }) {
 
   // first we build an array of queries for Appwrite
   const queries = [
@@ -88,14 +90,8 @@ export async function getExercisesByUserId({ userId, searchItem = '', limit = 10
     Query.orderAsc("name"),
 
     // Limit the number of exercises returned 
-    Query.limit(limit)
+    Query.limit(100)
   ];
-
-  // If the user typed something into a search box, we can add a search filter
-  // `Query.search` performs a fulltext-like search on the "name" field
-  if (searchTerm && searchTerm.trim().length > 0) {
-    queries.push(Query.search('name', searchTerm.trim()));
-  }
 
   // Ask Appwrite for the documents that match our queries
   const res = await databases.listDocuments(
