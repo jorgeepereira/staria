@@ -1,20 +1,22 @@
-import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, useColorScheme } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
 
 // themed components
 import ExerciseCard from '@/components/exercise-card';
+import ExercisePicker from '@/components/exercise-picker';
 import Spacer from '@/components/spacer.jsx';
 import ThemedButton from '@/components/themed-button.jsx';
+import ThemedLoader from '@/components/themed-loader';
 import ThemedText from '@/components/themed-text.jsx';
 import ThemedView from '@/components/themed-view.jsx';
 import { darkTheme, lightTheme } from '@/constants/theme.js';
 
 // workout helper functions
-import ThemedLoader from '@/components/themed-loader';
 import { useAuth } from '@/contexts/AuthContext';
-import { createExercise, getExercisesByUserId } from '@/services/exercises';
-import { createSet, getWorkoutWithSets } from '@/services/workouts';
+import { useActiveWorkout } from '@/hooks/useActiveWorkout';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
 
 
 const ActiveWorkoutScreen = () => {
@@ -23,59 +25,66 @@ const ActiveWorkoutScreen = () => {
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const styles = getStyles(theme);
 
+  const router = useRouter();
   const { user } = useAuth();
   const { workoutId } = useLocalSearchParams(); // comes from the route parameters
 
-  const [loading, setLoading] = useState(true);
-  const [workout, setWorkout] = useState(null);
-  const [sets, setSets] = useState([]);
-  const [error, setError] = useState(null);
+  const [pickerVisible, setPickerVisible] = useState(false);
 
-  // exercise picker states
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [exercises, setExercises] = useState([]);
-  const [loadingExercises, setLoadingExercises] = useState(false);
-  const [creatingExercise, setCreatingExercise] = useState(false);
-  const [newExerciseName, setNewExerciseName] = useState('');
-  const [savingExercise, setSavingExercise] = useState(false);
+  // use the hook – it loads itself (no manual call in render)
+  const {
+    loading,
+    error,
+    workout,
+    setsByExercise,
+    refresh,          // call this if you want to reload on demand
+    addSet,
+    renameWorkout,
+    updateSet,
+    deleteSet,
+    finish,
+  } = useActiveWorkout(user?.$id, workoutId);
 
-  // Group sets by exerciseId so we can render one ExerciseCard per exercise
-  const setsByExercise = useMemo(() => {
-    const groups = {};
-    for (const set of sets) {
-      const exId = set.exerciseId;
-      if (!groups[exId]) groups[exId] = [];
-      groups[exId].push(set);
-    }
-    return groups;
-  }, [sets]);
+  // open picker
+  const openExercisePicker = () => setPickerVisible(true);
+  const closeExercisePicker = () => setPickerVisible(false);
 
-  // List of exercise IDs present in this workout (from sets)
-  const exerciseIds = Object.keys(setsByExercise);
+  // inline name editing state
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
-  // 1. Load workout + sets from Appwrite
+  // keep draft in sync when not editing
   useEffect(() => {
-    async function loadWorkout() {
+    if (!editingName) {
+      setNameDraft(workout?.workoutName || '');
+    }
+  }, [workout?.workoutName, editingName]);
+
+  async function handleEndEditingName() {
+    const next = String(nameDraft ?? '').trim().slice(0, 24);
+    if (next !== (workout.workoutName || '')) {
       try {
-        setLoading(true);
-        setError(null);
-
-        const { workout, sets } = await getWorkoutWithSets({ userId: user.$id, workoutId });
-
-        setWorkout(workout);
-        setSets(sets);
-      } catch (error) {
-        console.log('Failed to load workout', error);
-        setError('Failed to load workout');
+        setSavingName(true);
+        await renameWorkout(next);   // optimistic in hook; persists to DB
+      } catch (e) {
+        console.warn('rename failed', e);
+        setNameDraft(workout?.workoutName || '');
       } finally {
-        setLoading(false);
+        setSavingName(false);
       }
     }
+    setEditingName(false);
+  }
 
-    if (user && workoutId) {
-      loadWorkout();
+  // when exercise selected: just add a set for it
+  async function handleSelectExercise(ex) {
+    try {
+      await addSet(ex.$id);
+    } catch (e) {
+      console.warn('add set failed', e);
     }
-  }, [user, workoutId]);
+  }
 
   // 2. Show loader while fetching
   if (loading) {
@@ -84,196 +93,94 @@ const ActiveWorkoutScreen = () => {
     );
   }
 
-  // 3. Basic error handling
   if (error || !workout) {
     return (
       <ThemedView style={styles.container}>
-        <ThemedText>{error || 'Workout not found'}</ThemedText>
+        <ThemedText>Error: {String(error || 'Workout not found')}</ThemedText>
+        <Spacer />
+        <ThemedButton style={styles.button} onPress={refresh}>
+          <ThemedText style={{ fontWeight: '800' }}>Retry</ThemedText>
+        </ThemedButton>
       </ThemedView>
     );
   }
 
-  // Add another set for a given exercise in this workout
-  async function handleAddSetForExercise(exerciseId) {
+  const exerciseIds = Object.keys(setsByExercise);
+  const totalSets = Object.values(setsByExercise).reduce((n, arr) => n + arr.length, 0);
+
+
+  // Handle finish workout
+  async function handleFinishWorkout() {
     try {
-      const nextOrder = (sets?.length ?? 0) + 1;
-
-      const newSet = await createSet({
-        userId: user.$id,
-        workoutId: workout.$id,
-        exerciseId,
-        order: nextOrder,
-        reps: 1,
-        weight: null,
-        rpe: null,
-        completed: false,
-        notes: '',
-      });
-
-      setSets((prev) => [...prev, newSet]);
+      const safeName = String(workout?.workoutName ?? 'My Workout').slice(0, 24);
+      await finish( safeName, 'End of workout - Note' );
+      router.replace('(tabs)');
     } catch (error) {
-      console.log('Failed to add set for exercise', error);
-    }
-  }
-
-  // Exercise picker logic
-  async function handleOpenExercisePicker() {
-    try {
-      
-      // open picker UI
-      setPickerOpen(true);
-      setLoadingExercises(true);
-
-      // fetch user exercises
-      const exercises = await getExercisesByUserId(user.$id);
-      setExercises(exercises);
-      setCreatingExercise(exercises.length === 0); // open create form if empty
-
-    } catch (error) {
-      console.log('Failed to load exercises', error);
-    } finally {
-      setLoadingExercises(false);
-    }
-  }
-
-  async function handleCreateAndAdd() {
-    if (!newExerciseName.trim()) return;
-    try {
-      setSavingExercise(true);
-      const ex = await createExercise({ userId: user.$id, name: newExerciseName.trim(), targetMuscle: 'chest', type: 'barbell' });
-      setExercises((prev) => [...prev, ex]);
-      setNewExerciseName('');
-      // Immediately add the first set for this new exercise
-      await handleSelectExercise(ex);
-    } catch (e) {
-      console.log('Failed to create exercise', e);
-      console.log({userId: user.$id});
-      
-    } finally {
-      setSavingExercise(false);
-    }
-  }
-
-  // Handle exercise selection
-  async function handleSelectExercise(exercise) {
-    try {
-      setPickerOpen(false);
-
-      const nextOrder = (sets?.length ?? 0) + 1;
-
-      const newSet = await createSet({
-        userId: user.$id,
-        workoutId: workout.$id,
-        exerciseId: exercise.$id,
-        order: nextOrder,
-        reps: 1,
-        weight: null,
-        rpe: null,
-        notes: '',
-      });
-
-      setSets((prevSets) => [...prevSets, newSet]);
-    } catch (error) {
-      console.log('Failed to add initial set', error);
+      console.log('Failed to finish workout', error);
     }
   }
 
 
   // Render the active workout screen
   return (
-      <ThemedView style={styles.container} safe>
-        <ScrollView style={{ padding: 16 }}>
-
-          <Spacer />
-          <ThemedText style={{ marginTop: 16 }}>
-            Workout ID: {workout.$id}
-          </ThemedText>
-
-          <ThemedText secondary style={{ marginTop: 8 }}>
-            Started at: {new Date(workout.startedAt).toLocaleString()}
-          </ThemedText>
-
-          <ThemedText style={{ marginTop: 16 }}>
-            Total Sets: {sets?.length ?? 0}
-          </ThemedText>
+      <ThemedView style={styles.container}>
+        <ScrollView>
 
           <Spacer />
 
-          <ThemedButton style={styles.buttonAddExercise} onPress={handleOpenExercisePicker}>
+          <ThemedView style={styles.headerContainer}>
+              {/* Editable workout name */}
+            <View style={styles.nameRow}>
+              {!editingName ? (
+                <ThemedText
+                  style={styles.nameText}
+                  onPress={() => setEditingName(true)}
+                >
+                  {workout.workoutName?.length ? workout.workoutName : 'My Workout'}
+                </ThemedText>
+              ) : (
+                <TextInput
+                  style={styles.nameInput}
+                  value={nameDraft}
+                  onChangeText={setNameDraft}
+                  placeholder="My Workout"
+                  autoFocus
+                  maxLength={16}
+                  returnKeyType="done"
+                  onSubmitEditing={handleEndEditingName}
+                  onEndEditing={handleEndEditingName}
+                />
+              )}
+            </View>
+
+            <ThemedView style={styles.subNameRow}>
+              <ThemedText>
+                <MaterialCommunityIcons name="calendar-start" size={16} color={theme.textSecondary} />
+              </ThemedText>
+              <ThemedText secondary>
+                {new Date(workout.startedAt).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+              </ThemedText>
+              
+            </ThemedView>
+
+          </ThemedView>
+
+          <ThemedButton style={styles.buttonAddExercise} onPress={openExercisePicker}>
             <ThemedText style={{ fontWeight: '800' }}>Add an Exercise</ThemedText>
           </ThemedButton>
 
           <Spacer />
 
-          {pickerOpen && (
-            <ThemedView style={{ marginTop: 12, backgroundColor: theme.secondary}}>
-              <ThemedText secondary style={{ marginBottom: 8 }}>
-                Select an exercise:
-              </ThemedText>
-
-              {loadingExercises && (
-                <ThemedText>Loading exercises...</ThemedText>
-              )}
-
-              {!loadingExercises && exercises.length === 0 && (
-                  <ThemedText>No exercises yet. Create one:</ThemedText>
-              )}
-
-
-              <Spacer height={8} />
-              <TextInput
-                placeholder="Exercise name (e.g., Bench Press)"
-                value={newExerciseName}
-                onChangeText={setNewExerciseName}
-                style={{
-                  backgroundColor: theme.background,
-                  color: theme.text,
-                  borderRadius: 8,
-                  padding: 12,
-                  borderWidth: 1,
-                  borderColor: theme.border
-                }}
-              />
-                  
-              <Spacer height={8} />
-              <ThemedButton
-                style={styles.buttonAddExercise}
-                disabled={savingExercise}
-                onPress={handleCreateAndAdd}
-              >
-                <ThemedText style={{ fontWeight: '800' }}>
-                  {savingExercise ? 'Saving...' : 'Create and Add'}
-                </ThemedText>
-              </ThemedButton>
-
-              {!loadingExercises && exercises.length > 0 && (
-                exercises.map((exercise) => (
-                  <ThemedButton
-                    key={exercise.$id}
-                    style={styles.button}
-                    onPress={() => handleSelectExercise(exercise)}
-                  >
-                    <ThemedText>{exercise.name}</ThemedText>
-                  </ThemedButton>
-                ))
-              )}
-            </ThemedView>
-          )}
-
           {/* Render all exercises (each with its sets) */}
           {exerciseIds.length > 0 && (
             <>
-              <Spacer height={16} />
-              <ThemedText style={{ fontWeight: '700', marginBottom: 8 }}>
-                Exercises in this workout
-              </ThemedText>
-
               {exerciseIds.map((exerciseId) => (
                 <ExerciseCard
                   key={exerciseId}
                   exerciseId={exerciseId}
                   sets={setsByExercise[exerciseId]}
-                  onAddSet={handleAddSetForExercise}
+                  onAddSet={addSet}
+                  onRemoveSet={deleteSet}
                 />
               ))}
             </>
@@ -281,10 +188,19 @@ const ActiveWorkoutScreen = () => {
 
           <Spacer />
 
-          <ThemedButton style={styles.button}>
+          <ThemedButton style={styles.finishButton} onPress={handleFinishWorkout}>
             <ThemedText style={{ fontWeight: '800' }}>Finish</ThemedText>
           </ThemedButton>
+
+          <Spacer />
         </ScrollView>
+
+        <ExercisePicker
+          visible={pickerVisible}
+          userId={user?.$id}
+          onSelect={handleSelectExercise}
+          onClose={closeExercisePicker}
+        />
       </ThemedView>
   )
 }
@@ -297,21 +213,47 @@ const getStyles = (theme) => StyleSheet.create({
     alignItems: 'stretch',
     justifyContent: 'flex-start',
   },
-  button: {
-    width: '100%',
+  headerContainer: {
+    padding: 16,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  nameText: {
+    flex: 1,
+    fontWeight: '800',
+    fontSize: 32,
+    color: theme.text,
+  },
+  nameInput: {
+    backgroundColor: 'transparent',
+    flex: 1,
+    fontWeight: '800',
+    fontSize: 32,
+    color: theme.text,
+  },
+  subNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  finishButton: {
     paddingVertical: 18,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.error,
+    marginHorizontal: 16,
   },
   buttonAddExercise: {
-    width: '100%',
     paddingVertical: 18,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.accent,
+    backgroundColor: theme.secondary,
+    marginHorizontal: 16,
   },
   
 })

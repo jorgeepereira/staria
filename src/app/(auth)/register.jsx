@@ -74,7 +74,7 @@ const Register = () => {
             {/* Underline */}
             <View
               style={{
-                width: 220, // adjust to match text width
+                width: 185, // adjust to match text width
                 height: 5,
                 backgroundColor: theme.accent,
                 borderRadius: 1,

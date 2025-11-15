@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 // import service helpers
-import { createSet, deleteSet as deleteSetService, finishWorkout as finishWorkoutService, getWorkoutWithSets, updateSet as updateSetService } from "@/services/workouts";
+import { createSet, deleteSet as deleteSetService, finishWorkout as finishWorkoutService, getWorkoutWithSets, updateSet as updateSetService, updateWorkoutName } from "@/services/workouts";
 
 /**
  * useActiveWorkout
@@ -71,6 +71,24 @@ export function useActiveWorkout(userId, workoutId) {
     return loadWorkout();
   }, [loadWorkout]);
 
+  // Optimistic rename
+  const renameWorkout = useCallback(async (name) => {
+    if (!workoutId) throw new Error('Missing workoutId');
+    const newName = String(name ?? '').trim().slice(0, 24);
+    const prev = workout?.workoutName ?? '';
+
+    // optimistic local state
+    setWorkout((w) => (w ? { ...w, workoutName: newName } : w));
+
+    try {
+      await updateWorkoutName(workoutId, newName);
+    } catch (e) {
+      // rollback on error
+      setWorkout((w) => (w ? { ...w, workoutName: prev } : w));
+      throw e;
+    }
+  }, [workoutId, workout]);
+
   // === 2) Add a new set (generic) ===
 
   /**
@@ -99,7 +117,7 @@ export function useActiveWorkout(userId, workoutId) {
         order: nextOrder,
         reps: seed.reps ?? 0,
         weight: seed.weight ?? 0,
-        rpe: seed.rpe ?? null,
+        rpe: seed.rpe ?? 1,
         notes: seed.notes ?? '',
       });
 
@@ -170,11 +188,12 @@ export function useActiveWorkout(userId, workoutId) {
    * - Updates local workout state to reflect that it's no longer active.
    */
   const finish = useCallback(
-    async (note = '') => {
+    async (workoutName, note) => {
       if (!workoutId) return null;
 
       const updated = await finishWorkoutService({
         workoutId,
+        workoutName,
         note,
       });
 
@@ -211,6 +230,8 @@ export function useActiveWorkout(userId, workoutId) {
     workout,
     sets,
     setsByExercise,
+    loadWorkout,
+    renameWorkout,
     refresh,
     addSet,
     addExerciseFirstSet,

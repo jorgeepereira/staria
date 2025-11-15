@@ -1,7 +1,11 @@
-import { StyleSheet, View } from 'react-native';
+import { darkTheme, lightTheme } from '@/constants/theme.js';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View, useColorScheme } from 'react-native';
 
 // Themed components from your design system
+import { MaterialIcons } from '@expo/vector-icons';
 import ThemedText from './themed-text.jsx';
+import ThemedTextInput from './themed-textInput.jsx';
 
 /**
  * SetRow
@@ -14,107 +18,100 @@ import ThemedText from './themed-text.jsx';
  *
  * For now it's read-only: just shows weight, reps, and a "Logged" indicator.
  */
-export default function SetRow({ set, index }) {
-  const weight = set.weight;
-  const reps = set.reps;
-  const rpe = set.rpe;
-  const completed = set.completed;
+export default function SetRow({ set, index, onRemove }) {
+  // theme logic
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const styles = getStyles(theme);
+
+  const [weight, setWeight] = useState('');
+  const [reps, setReps] = useState('');
+  const [rpe, setRpe] = useState('');
+  const [completed, setCompleted] = useState(false);
 
   return (
     <View style={styles.row}>
-      {/* Left side: "Set 1", "Set 2", etc. */}
-      <View style={styles.indexColumn}>
-        <ThemedText secondary style={styles.indexLabel}>
-          Set
-        </ThemedText>
-        <ThemedText style={styles.indexValue}>{index + 1}</ThemedText>
+      <View style={styles.deleteColumn}>
+        <Pressable onPress={onRemove} hitSlop={10}>
+          {({ pressed }) => (
+            <MaterialIcons 
+            name="remove" 
+            size={24} 
+            color= {pressed ? theme.error : theme.text}
+            />
+          )}
+        </Pressable>
       </View>
 
-      {/* Middle: weight + reps */}
-      <View style={styles.valuesColumn}>
-        <View style={styles.valueBlock}>
-          <ThemedText secondary style={styles.valueLabel}>
-            Weight
-          </ThemedText>
-          <ThemedText style={styles.valueValue}>
-            {weight}
-          </ThemedText>
-        </View>
-
-        <View style={styles.valueBlock}>
-          <ThemedText secondary style={styles.valueLabel}>
-            Reps
-          </ThemedText>
-          <ThemedText style={styles.valueValue}>
-            {reps}
-          </ThemedText>
-        </View>
-
-        
-        <View style={styles.valueBlock}>
-          <ThemedText secondary style={styles.valueLabel}>
-            RPE
-          </ThemedText>
-          <ThemedText style={styles.valueValue}>
-            {rpe}
-          </ThemedText>
-        </View>
-        
+      <View style={styles.valueColumn}>
+        <ThemedTextInput
+          value={weight}
+          onChangeText={setWeight}
+          keyboardType="numeric"
+          style={styles.input}
+          editable={!completed}
+        />
       </View>
 
-      {/* Right side: simple "Logged" indicator.
-         In the future you might have a "completed" boolean on the set.
-         For now, any saved set can be considered "logged".
-      */}
+      <View style={styles.valueColumn}>
+        <ThemedTextInput
+          value={reps}
+          onChangeText={setReps}
+          keyboardType="numeric"
+          style={styles.input}
+          editable={!completed}
+        />
+      </View>
+
       <View style={styles.statusColumn}>
-        <ThemedText secondary style={styles.valueLabel}>
-          Logged?
+        <ThemedText style={styles.loggedValue}>
+          {completed ? '✔' : '✘'}
         </ThemedText>
-        <ThemedText style={styles.loggedValue}>{completed ? '✓' : 'X'}</ThemedText>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginHorizontal: 12,
     paddingVertical: 8,
+    borderBottomColor: '#666666',
+    borderBottomWidth: 1,
   },
-  indexColumn: {
+  // Must match ExerciseCard
+  deleteColumn: {
     width: 50,
     alignItems: 'center',
   },
-  indexLabel: {
-    fontSize: 12,
+  valueColumn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusColumn: {
+    width: 60,
+    marginRight: 16,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
   indexValue: {
     fontSize: 16,
     fontWeight: '600',
   },
-  valuesColumn: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  valueBlock: {
-    alignItems: 'center',
-    minWidth: 60,
-  },
-  valueLabel: {
-    fontSize: 12,
-  },
-  valueValue: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  statusColumn: {
-    width: 70,
-    alignItems: 'center',
-  },
   loggedValue: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  input: {
+    flex: 1,
+    padding: 8,
+    borderRadius: 0,
+    width: '80%',
+    color: theme.text,
+    backgroundColor: theme.background,
+    textAlign: 'center',
   },
 });

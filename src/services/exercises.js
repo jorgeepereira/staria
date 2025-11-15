@@ -78,26 +78,21 @@ export async function getExerciseById(exerciseId) {
 
 // Fetch all exercises for a specific user
 // Returns a list of all exercises belonging to the user
-export async function getExercisesByUserId({ userId }) {
+export async function getExercisesByUserId( userId ) {
 
-  // first we build an array of queries for Appwrite
-  const queries = [
-
-    // Filter exercises by the user ID
-    Query.equal("userId", userId),
-
-    // Sort exercises by name in ascending order
-    Query.orderAsc("name"),
-
-    // Limit the number of exercises returned 
-    Query.limit(100)
-  ];
+  if (!userId || typeof userId !== 'string') {
+    return [];
+  }
 
   // Ask Appwrite for the documents that match our queries
   const res = await databases.listDocuments(
     DB_ID,
     EXERCISES_COLLECTION_ID,
-    queries
+    [
+      Query.equal("userId", userId),
+      Query.orderAsc("name"),
+      Query.limit(100)
+    ]
   );
 
   // Return just the array of documents

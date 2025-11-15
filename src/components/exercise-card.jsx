@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, useColorScheme } from 'react-native';
 
+
+import { darkTheme, lightTheme } from '@/constants/theme.js';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { getExerciseById } from '../services/exercises.js';
+import SetRow from './set-row.jsx';
 import Spacer from './spacer.jsx';
-import ThemedButton from './themed-button.jsx';
+import TargetMuscleChip from './target-muscle-chip.jsx';
 import ThemedText from './themed-text.jsx';
 import ThemedView from './themed-view.jsx';
 
-// Our exercise service helper to get exercise details by ID
-import { getExerciseById } from '../services/exercises.js';
-
-// Our SetRow component
-import SetRow from './set-row.jsx';
 
 /**
  * ExerciseCard
@@ -30,7 +30,15 @@ export default function ExerciseCard({
   exerciseId,
   sets,
   onAddSet,
+  onRemoveSet,
 }) {
+
+  // theme logic
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+  const styles = getStyles(theme);
+
+  
   // Local state for exercise details (name, targetMuscle, etc.)
   const [exercise, setExercise] = useState(null);
   const [loadingExercise, setLoadingExercise] = useState(true);
@@ -74,26 +82,27 @@ export default function ExerciseCard({
   // Derive some display values from the exercise doc (if loaded)
   const name = exercise?.name ?? 'Exercise';
   const targetMuscle = exercise?.targetMuscle ?? '';
+  const typeUpperCase = (exercise?.type ?? '').toUpperCase();
 
   return (
     <ThemedView style={styles.card}>
       {/* Header: Exercise name + target muscle */}
       <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
+        
+        <ThemedView style={{ backgroundColor: 'transparent' }}>
           <ThemedText style={styles.title}>{name}</ThemedText>
+          <ThemedText secondary style={styles.subtitle}>{typeUpperCase}</ThemedText>
+        </ThemedView>
 
-          {targetMuscle ? (
-            <ThemedText secondary style={styles.subtitle}>
-              {targetMuscle}
-            </ThemedText>
-          ) : null}
+        <ThemedView style={styles.exerciseChips}>
+          <TargetMuscleChip group={targetMuscle} compact />
+        </ThemedView>
 
-          {error && (
-            <ThemedText secondary style={{ marginTop: 4 }}>
-              {error}
-            </ThemedText>
-          )}
-        </View>
+        {error && (
+          <ThemedText secondary style={{ marginTop: 4 }}>
+            {error}
+          </ThemedText>
+        )}
 
         {/* Optional: show a tiny loading hint while exercise is loading */}
         {loadingExercise && (
@@ -103,32 +112,32 @@ export default function ExerciseCard({
         )}
       </View>
 
+
       <Spacer height={8} />
 
-      {/* Column labels: Weight / Reps / Logged */}
+      {/* Column labels: Set | Weight | Reps | LOG */}
       <View style={styles.labelsRow}>
-        <View style={styles.indexColumn}>
-          <ThemedText secondary style={styles.labelText}>
-            Set
-          </ThemedText>
+        <View style={styles.deleteColumn}>
+          <Pressable
+            style={styles.addSetButton}
+            onPress={() => onAddSet?.(exerciseId)}
+          >
+          {({ pressed }) => (
+            <MaterialIcons 
+            name="format-list-bulleted-add" 
+            size={24} 
+            color= {pressed ? theme.success : theme.text}/>
+          )}
+          </Pressable>
         </View>
-
-        <View style={styles.valuesColumn}>
-          <View style={styles.valueBlock}>
-            <ThemedText secondary style={styles.labelText}>
-              Weight
-            </ThemedText>
-          </View>
-          <View style={styles.valueBlock}>
-            <ThemedText secondary style={styles.labelText}>
-              Reps
-            </ThemedText>
-          </View>
-          <View style={styles.valueBlock}>
-            <ThemedText secondary style={styles.labelText}>
-              Logged
-            </ThemedText>
-          </View>
+        <View style={styles.valueColumn}>
+          <ThemedText style={styles.labelText}>WEIGHT</ThemedText>
+        </View>
+        <View style={styles.valueColumn}>
+          <ThemedText style={styles.labelText}>REPS</ThemedText>
+        </View>
+        <View style={styles.statusColumn}>
+          <ThemedText style={styles.labelText}>LOG</ThemedText>
         </View>
       </View>
 
@@ -146,6 +155,7 @@ export default function ExerciseCard({
           key={set.$id}
           set={set}
           index={idx}
+          onRemove={() => onRemoveSet?.(set.$id)}
         />
       ))}
 
@@ -153,59 +163,65 @@ export default function ExerciseCard({
          This delegates the action up to the parent via onAddSet.
       */}
       <Spacer height={8} />
-      <ThemedButton
-        style={styles.addSetButton}
-        onPress={() => onAddSet?.(exerciseId)}
-      >
-        <ThemedText style={{ fontWeight: '600' }}>
-          Add Set
-        </ThemedText>
-      </ThemedButton>
+      
     </ThemedView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   card: {
-    padding: 16,
-    borderRadius: 12,
     marginBottom: 16,
+    paddingBottom: 8,
+    backgroundColor: '#212121',
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
   },
   subtitle: {
-    marginTop: 2,
-    fontSize: 13,
+    marginTop: 4,
+    fontSize: 10,
+  },
+  exerciseChips: {
+    marginBottom: 16,
+    backgroundColor: 'transparent',
+    alignItems: 'flex-end',
   },
   labelsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    paddingVertical: 6,
+    marginHorizontal: 12,
   },
-  indexColumn: {
+  // Make these match SetRow
+  deleteColumn: {
     width: 50,
     alignItems: 'center',
   },
+  valueColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statusColumn: {
+    width: 60,
+    marginRight: 16,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   labelText: {
     fontSize: 12,
-    fontWeight: '500',
-  },
-  valuesColumn: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  valueBlock: {
-    alignItems: 'center',
-    minWidth: 60,
+    fontWeight: '600',
   },
   addSetButton: {
+    backgroundColor: 'transparent',
     marginTop: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
