@@ -18,8 +18,9 @@ export const darkTheme = {
   primary: '#95b4da',
   secondary: '#2a5589',
   accent: '#4080ce',
-  border: '#1f2937',
+  border: '#666666',
   success: '#22c55e',
   error: '#ef4444',
-  textInput: '#14213d'
+  textInput: '#14213d',
+  cardBackground: '#212121',
 };

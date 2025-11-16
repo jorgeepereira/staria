@@ -30,6 +30,7 @@ export default function ExerciseCard({
   exerciseId,
   sets,
   onAddSet,
+  onUpdateSet,
   onRemoveSet,
 }) {
 
@@ -156,6 +157,7 @@ export default function ExerciseCard({
           set={set}
           index={idx}
           onRemove={() => onRemoveSet?.(set.$id)}
+          onChange={(patch) => onUpdateSet?.(set.$id, patch)}
         />
       ))}
 

@@ -124,7 +124,7 @@ const ActiveWorkoutScreen = () => {
   // Render the active workout screen
   return (
       <ThemedView style={styles.container}>
-        <ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false}>
 
           <Spacer />
 
@@ -181,6 +181,7 @@ const ActiveWorkoutScreen = () => {
                   sets={setsByExercise[exerciseId]}
                   onAddSet={addSet}
                   onRemoveSet={deleteSet}
+                  onUpdateSet={updateSet}
                 />
               ))}
             </>

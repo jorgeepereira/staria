@@ -4,7 +4,8 @@ import ThemedText from '@/components/themed-text.jsx';
 import ThemedView from '@/components/themed-view.jsx';
 import { darkTheme, lightTheme } from '@/constants/theme.js';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import ThemedTextInput from './themed-textInput';
 
 /**
  * Small centered modal to create an Exercise.
@@ -39,7 +40,9 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
   const submit = async () => {
     if (!canCreate) return;
     await onCreate?.({ name: name.trim(), targetMuscle: targetMuscle.toLowerCase().trim(), type: exType.toLowerCase().trim() });
-    // Keep fields; parent decides whether to keep modal open or not.
+    setName('');
+    setTargetMuscle('');
+    setExType('');
   };
 
   return (
@@ -53,11 +56,24 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
       <View style={styles.backdrop}>
         {/* Card */}
         <ThemedView style={styles.card}>
-          <ThemedText heading style={{ marginBottom: 10 }}>Create Exercise</ThemedText>
+          <ThemedView style={{alignItems: 'center', backgroundColor: 'transparent', marginBottom: 20}}>
+            <ThemedText heading style={{ fontFamily: 'Orbitron', fontWeight: '500'}}>
+              Create Exercise
+            </ThemedText>
+          </ThemedView>
 
           {/* Name */}
-          <ThemedText style={{ marginBottom: 6 }}>Name</ThemedText>
-          <TextInput
+          <ThemedText style={styles.label}>Name</ThemedText>
+          <View
+              style={{
+                width: 50, // adjust to match text width
+                height: 2,
+                backgroundColor: theme.accent,
+                borderRadius: 1,
+                marginBottom: 8,
+              }}
+            />
+          <ThemedTextInput
             value={name}
             onChangeText={setName}
             placeholder="e.g., Bench Press"
@@ -68,7 +84,16 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
           <Spacer height={12} />
 
           {/* Target Muscle dropdown */}
-          <ThemedText style={{ marginBottom: 6 }}>Target Muscle</ThemedText>
+          <ThemedText style={styles.label}>Target Muscle</ThemedText>
+          <View
+              style={{
+                width: 110, // adjust to match text width
+                height: 2,
+                backgroundColor: theme.accent,
+                borderRadius: 1,
+                marginBottom: 8,
+              }}
+            />
           <Pressable
             onPress={() => { setMuscleOpen(o => !o); setTypeOpen(false); }}
             style={[styles.select, { borderColor: theme.border, backgroundColor: theme.background }]}
@@ -95,7 +120,17 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
           <Spacer height={12} />
 
           {/* Type dropdown */}
-          <ThemedText style={{ marginBottom: 6 }}>Type</ThemedText>
+          <ThemedText style={styles.label}>Equipment</ThemedText>
+          {/* Underline */}
+            <View
+              style={{
+                width: 85, // adjust to match text width
+                height: 2,
+                backgroundColor: theme.accent,
+                borderRadius: 1,
+                marginBottom: 8,
+              }}
+            />
           <Pressable
             onPress={() => { setTypeOpen(o => !o); setMuscleOpen(false); }}
             style={[styles.select, { borderColor: theme.border, backgroundColor: theme.background }]}
@@ -147,7 +182,7 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
 const getStyles = (theme) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: '#0008',
+    backgroundColor: 'rgba(12, 11, 11, 0.90)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -157,36 +192,38 @@ const getStyles = (theme) => StyleSheet.create({
     maxWidth: 420,
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: theme.border,
+    backgroundColor: '#212121',
+  },
+  label: {
+    marginBottom: 2,
+    fontWeight: '600',
+    color: theme.text,
   },
   input: {
-    borderWidth: 1,
-    borderColor: theme.border,
-    borderRadius: 10,
+    borderRadius: 4,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 16,
     color: theme.text,
     backgroundColor: theme.background,
   },
   select: {
-    borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 4,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 16,
   },
   menu: {
-    maxHeight: 160,
+    maxHeight: 200,
     marginTop: 6,
-    borderWidth: 1,
-    borderRadius: 10,
-    borderColor: theme.border,
+    borderRadius: 2,
+    borderColor: theme.secondary,
+    borderWidth: 2,
+    backgroundColor: theme.background,
   },
   menuItem: {
+    marginHorizontal: 12,
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderColor: theme.border,
   },
   btn: {
     paddingVertical: 14,

@@ -50,7 +50,7 @@ export async function createSet({
   workoutId,
   exerciseId,
   order,
-  reps,
+  reps = null,
   weight = null,
   rpe = null,
   completed = false,

@@ -1,20 +1,20 @@
-import Spacer from '@/components/spacer.jsx';
-import ThemedButton from '@/components/themed-button.jsx';
 import ThemedText from '@/components/themed-text.jsx';
 import ThemedView from '@/components/themed-view.jsx';
 import { darkTheme, lightTheme } from '@/constants/theme.js';
 import { useAuth } from '@/contexts/AuthContext';
-import { createExercise, getExercisesByUserId } from '@/services/exercises';
+import { createExercise, deleteExercise, getExercisesByUserId } from '@/services/exercises';
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   TextInput,
   useColorScheme
 } from 'react-native';
+import { SwipeListView } from 'react-native-swipe-list-view';
 import ExerciseCreate from './exercise-create';
 import ExerciseTypeChip from './exercise-type-chip';
 import TargetMuscleChip from './target-muscle-chip';
@@ -79,6 +79,27 @@ const ExercisePicker = ({
     }
   }, [userId, onSelect, onClose]);
 
+  const handleDelete = useCallback(async (ex, rowMap) => {
+    // Optional confirm
+    Alert.alert('Delete exercise', `Delete "${ex.name}"?`, [
+      { text: 'Cancel', style: 'cancel', onPress: () => rowMap?.[ex.$id]?.closeRow() },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteExercise(ex.$id);
+          } catch (e) {
+            console.warn('delete exercise failed', e);
+          } finally {
+            setExercises(prev => prev.filter(x => x.$id !== ex.$id));
+            rowMap?.[ex.$id]?.closeRow();
+          }
+        },
+      },
+    ]);
+  }, []);
+
   const filtered = filter
     ? exercises.filter(e => e.name.toLowerCase().includes(filter.toLowerCase()))
     : exercises;
@@ -91,79 +112,86 @@ const ExercisePicker = ({
       presentationStyle="pageSheet"
     >
       <ThemedView style={styles.container}>
-        <ThemedView style={styles.headerRow}>
 
-          <ThemedText heading>
-            Your Exercises
-          </ThemedText>
+        <ThemedView style={styles.headerContainer}>
+          <ThemedView style={styles.headerRow}>
 
-          <ThemedButton
-            style={[styles.smallBtn, { backgroundColor: theme.accent }]}
-            onPress={() => setShowCreate(true)}
-          >
-            <ThemedText style={{ fontWeight: '700' }}>New</ThemedText>
-          </ThemedButton>
+            <ThemedText heading>
+              Exercises
+            </ThemedText>
 
+            <Pressable onPress={() => setShowCreate(true)}>
+              {({ pressed }) => (
+              <Ionicons 
+                name={pressed ? "create" : "create-outline"}
+                size={32}
+                color={theme.text}
+              />
+              )}
+            </Pressable>
+
+          </ThemedView>
+
+          <TextInput
+            placeholder="Search..."
+            value={filter}
+            onChangeText={setFilter}
+            style={styles.input}
+            placeholderTextColor={theme.textSecondary}
+          />
         </ThemedView>
-
-        <TextInput
-          placeholder="Search..."
-          value={filter}
-          onChangeText={setFilter}
-          style={styles.input}
-          placeholderTextColor={theme.textSecondary}
-        />
-
-        <Spacer height={12} />
 
         {loading && (
           <ActivityIndicator color={theme.accent} style={{ marginTop: 20 }} />
         )}
 
 
-        <ScrollView style={styles.scrollView}>
+        {/* Swipe list replacing ScrollView */}
+        {!loading && (
+          <SwipeListView
+            data={filtered}
+            keyExtractor={(item) => item.$id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+            // FRONT ROW: your existing item UI
+            renderItem={({ item }) => (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.exerciseItem,
+                  { borderColor: pressed ? theme.accent : theme.background },
+                ]}
+                onPress={() => {
+                  onSelect?.(item);
+                  onClose?.();
+                }}
+              >
+                <ThemedView style={styles.exerciseNameContainer}>
+                  <ThemedText style={{ fontSize: 18, fontWeight: '600' }}>{item.name}</ThemedText>
+                </ThemedView>
 
-          {!loading && filtered.length === 0 && (
-          <ThemedText secondary>No exercises yet.</ThemedText>
-          )}
-
-          {filtered.map(ex => (
-            <Pressable
-              key={ex.$id}
-              style={({ pressed }) => [
-                styles.exerciseItem,
-                {
-                  backgroundColor: pressed
-                    ? theme.secondary
-                    : theme.background,
-                  borderColor: theme.border,
-                },
-              ]}
-              onPress={() => {
-                onSelect?.(ex);
-                onClose?.();
-              }}
-            >
-              <ThemedView style={styles.exerciseNameContainer}>
-                <ThemedText style={{ fontSize: 18, fontWeight: '600' }}>{ex.name}</ThemedText>
+                <ThemedView style={styles.exerciseChips}>
+                  <TargetMuscleChip group={item.targetMuscle} compact />
+                  <ExerciseTypeChip type={item.type} compact />
+                </ThemedView>
+              </Pressable>
+            )}
+            // HIDDEN ROW: right-side delete
+            renderHiddenItem={({ item, rowMap }) => (
+              <ThemedView style={styles.hiddenRow}>
+                <Pressable
+                  style={styles.deleteAction}
+                  onPress={() => handleDelete(item, rowMap)}
+                >
+                  <Ionicons name="trash" size={28} color="#fff" />
+                </Pressable>
               </ThemedView>
-              
-              <ThemedView style={styles.exerciseChips}>
-                <TargetMuscleChip group={ex.targetMuscle} compact />
-                <ExerciseTypeChip type={ex.type} compact />
-              </ThemedView>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        <Spacer height={12} />
-
-        <ThemedButton
-          style={[styles.closeBtn, { backgroundColor: theme.error }]}
-          onPress={onClose}
-        >
-            <ThemedText style={{ fontWeight: '800' }}>Close</ThemedText>
-        </ThemedButton>
+            )}
+            rightOpenValue={-96}     // how far to reveal the delete action
+            disableLeftSwipe={false} // allow right swipe
+            disableRightSwipe={true} // block left swipe (optional)
+          />
+        )}
+        
       </ThemedView>
 
       {/* Nested, small centered modal for creating an exercise */}
@@ -184,44 +212,68 @@ const getStyles = theme =>
   StyleSheet.create({
     container: {
       flex: 1,
-      padding: 16,
       alignItems: 'stretch',
+      backgroundColor: theme.cardBackground,
+    },
+    headerContainer: {
+      padding: 16,
+      borderBottomColor: theme.border,
+      borderWidth: 1,
     },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 12,
+      backgroundColor: 'transparent',
     },
     scrollView: {
       flex: 1,
       width: '100%',
-      paddingTop: 12,
+      padding: 8,
     },
     input: {
-      backgroundColor: theme.background,
+      backgroundColor: theme.cardBackground,
       color: theme.text,
       borderWidth: 1,
       borderColor: theme.border,
-      borderRadius: 10,
+      borderRadius: 2,
       paddingHorizontal: 12,
       paddingVertical: 10,
       fontSize: 16,
     },
-    smallBtn: {
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
+    // SwipeListView
+    listContent: {
+      padding: 8,
     },
     exerciseItem: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      borderBottomWidth: 1,
+      borderWidth: 1,
       padding: 14,
       marginBottom: 8,
+      backgroundColor: theme.background,
+    },
+    hiddenRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      marginBottom: 8,
+      backgroundColor: theme.background,
+    },
+    deleteAction: {
+      width: 80,
+      height: '100%',
+      backgroundColor: theme.error,
+      borderRadius: 2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    deleteText: {
+      color: '#fff',
+      fontWeight: '700',
     },
     exerciseNameContainer: {
       backgroundColor: 'transparent',
@@ -233,11 +285,5 @@ const getStyles = theme =>
       flexDirection: 'column',
       alignItems: 'flex-end',
       gap: 8,
-    },
-    closeBtn: {
-      paddingVertical: 16,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
   });

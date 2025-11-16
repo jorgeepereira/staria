@@ -28,8 +28,9 @@ const ThemedText = ({
 const styles = StyleSheet.create({
   heading: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '600',
     marginBottom: 6,
+    fontFamily: 'Orbitron',
   },
 });
 

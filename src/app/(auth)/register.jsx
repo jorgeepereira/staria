@@ -60,7 +60,7 @@ const Register = () => {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <ThemedView style={styles.container}>
 
-          <ThemedView>
+          <ThemedView style={{ alignItems: 'center' }}>
             <ThemedText style={{
               fontFamily: 'Orbitron',
               fontWeight: '700',
@@ -74,7 +74,7 @@ const Register = () => {
             {/* Underline */}
             <View
               style={{
-                width: 185, // adjust to match text width
+                width: 220, // adjust to match text width
                 height: 5,
                 backgroundColor: theme.accent,
                 borderRadius: 1,
@@ -174,8 +174,8 @@ const getStyles = (theme) => StyleSheet.create({
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: theme.border,
-    borderRadius: 12,
-    backgroundColor: theme.textInput,
+    borderRadius: 4,
+    backgroundColor: theme.cardBackground,
   },
   inputIcon: {
     marginRight: 8,
@@ -183,5 +183,6 @@ const getStyles = (theme) => StyleSheet.create({
   inputField: {
     flex: 1,
     paddingVertical: 18,
+    backgroundColor: theme.cardBackground,
   },
 })

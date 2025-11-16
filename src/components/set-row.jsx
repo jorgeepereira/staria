@@ -1,11 +1,14 @@
 import { darkTheme, lightTheme } from '@/constants/theme.js';
-import { useState } from 'react';
-import { Pressable, StyleSheet, View, useColorScheme } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, TextInput, View, useColorScheme } from 'react-native';
 
 // Themed components from your design system
 import { MaterialIcons } from '@expo/vector-icons';
-import ThemedText from './themed-text.jsx';
-import ThemedTextInput from './themed-textInput.jsx';
+import ThemedCheckbox from './themed-checkbox.jsx';
+
+// helpers: display '' for 0 or null; send null for blank
+const displayFromNumber = (n) => (n == null || n === 0 ? '' : String(n));
+const numberOrNull = (s) => (s === '' || s == null ? null : Number(s));
 
 /**
  * SetRow
@@ -18,7 +21,7 @@ import ThemedTextInput from './themed-textInput.jsx';
  *
  * For now it's read-only: just shows weight, reps, and a "Logged" indicator.
  */
-export default function SetRow({ set, index, onRemove }) {
+export default function SetRow({ set, index, onRemove, onChange }) {
   // theme logic
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
@@ -28,6 +31,37 @@ export default function SetRow({ set, index, onRemove }) {
   const [reps, setReps] = useState('');
   const [rpe, setRpe] = useState('');
   const [completed, setCompleted] = useState(false);
+
+  // Keep locals in sync when parent updates the set
+  useEffect(() => {
+    setWeight(displayFromNumber(set?.weight));
+  }, [set?.weight]);
+  useEffect(() => {
+    setReps(displayFromNumber(set?.reps));
+  }, [set?.reps]);
+  useEffect(() => {
+    setCompleted(!!set?.completed);
+  }, [set?.completed]);
+
+  const commitWeight = () => {
+    const val = numberOrNull(weight);
+    onChange?.({ weight: val });
+    setWeight(displayFromNumber(val));
+  };
+  const commitReps = () => {
+    const val = numberOrNull(reps);
+    onChange?.({ reps: val });
+    setReps(displayFromNumber(val));
+  };
+  const toggleCompleted = () => {
+    const next = !completed;
+    setCompleted(next);
+    onChange?.({
+      completed: next,
+      weight: numberOrNull(weight),
+      reps: numberOrNull(reps),
+    });
+  };
 
   return (
     <View style={styles.row}>
@@ -44,9 +78,10 @@ export default function SetRow({ set, index, onRemove }) {
       </View>
 
       <View style={styles.valueColumn}>
-        <ThemedTextInput
+        <TextInput
           value={weight}
           onChangeText={setWeight}
+          onEndEditing={commitWeight}
           keyboardType="numeric"
           style={styles.input}
           editable={!completed}
@@ -54,9 +89,10 @@ export default function SetRow({ set, index, onRemove }) {
       </View>
 
       <View style={styles.valueColumn}>
-        <ThemedTextInput
+        <TextInput
           value={reps}
           onChangeText={setReps}
+          onEndEditing={commitReps}
           keyboardType="numeric"
           style={styles.input}
           editable={!completed}
@@ -64,9 +100,10 @@ export default function SetRow({ set, index, onRemove }) {
       </View>
 
       <View style={styles.statusColumn}>
-        <ThemedText style={styles.loggedValue}>
-          {completed ? '✔' : '✘'}
-        </ThemedText>
+        <ThemedCheckbox
+          value={completed}
+          onChange={toggleCompleted}
+        />
       </View>
     </View>
   );

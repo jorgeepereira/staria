@@ -128,7 +128,7 @@ const getStyles = (theme) => StyleSheet.create({
   choiceButtons: {
     width: '45%',
     paddingVertical: 18,
-    borderRadius: 14,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.textInput,

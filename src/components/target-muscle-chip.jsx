@@ -79,7 +79,4 @@ export default function TargetMuscleChip({ group, onPress, style, textStyle, com
 }
 
 const styles = StyleSheet.create({
-  chip: {
-    borderWidth: 1,
-  },
 });

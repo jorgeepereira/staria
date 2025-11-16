@@ -115,10 +115,10 @@ export function useActiveWorkout(userId, workoutId) {
         workoutId,
         exerciseId,
         order: nextOrder,
-        reps: seed.reps ?? 0,
-        weight: seed.weight ?? 0,
-        rpe: seed.rpe ?? 1,
-        notes: seed.notes ?? '',
+        reps: seed.reps,
+        weight: seed.weight,
+        rpe: seed.rpe,
+        notes: seed.notes,
       });
 
       // Update local state with the new set so the UI reflects the change instantly.
