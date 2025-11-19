@@ -15,6 +15,17 @@ export async function updateWorkoutName(workoutId, workoutName) {
   return updateWorkout(workoutId, { workoutName });
 }
 
+// Convenience helper for just the duration (in seconds)
+export async function updateWorkoutDuration(workoutId, duration) {
+  // duration expected as integer seconds
+  return updateWorkout(workoutId, { duration: Number(duration) || 0 });
+}
+
+// Convenience helper for just the note
+export async function updateWorkoutNote(workoutId, note) {
+  return updateWorkout(workoutId, { note: String(note || '') });
+}
+
 // Start a new workout session
 export async function startWorkout({ userId }) {
   // Create a the workoutData payload to pass to the database
@@ -111,12 +122,16 @@ export async function deleteSet( setId ) {
 
 // Finish a workout session
 // Marks the workout as finished by setting the endedAt timestamp and an optional note
-export async function finishWorkout({ workoutId, workoutName, note = '' }) {
+export async function finishWorkout({ workoutId, workoutName, note = '', duration }) {
   // create a patch with the endedAt timestamp and note
   const patch = {
     endedAt: new Date().toISOString(),
     note,
     workoutName
+  }
+
+  if (duration != null) {
+    patch.duration = Number(duration) || 0;
   }
 
   // update the workout document in the database with the endedAt timestamp and note

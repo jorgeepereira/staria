@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 // import service helpers
-import { createSet, deleteSet as deleteSetService, finishWorkout as finishWorkoutService, getWorkoutWithSets, updateSet as updateSetService, updateWorkoutName } from "@/services/workouts";
+import { createSet, deleteSet as deleteSetService, finishWorkout as finishWorkoutService, getWorkoutWithSets, updateSet as updateSetService, updateWorkoutDuration, updateWorkoutName, updateWorkoutNote } from "@/services/workouts";
 
 /**
  * useActiveWorkout
@@ -20,9 +20,14 @@ export function useActiveWorkout(userId, workoutId) {
 
   const [workout, setWorkout] = useState(null); // the workout document
   const [sets, setSets] = useState([]); // the sets that belong to this workout
+  const [note, setNote] = useState(''); // workout note
 
   const [loading, setLoading] = useState(true); // loading state
   const [error, setError] = useState(null); // error state
+  const [durationSec, setDurationSec] = useState(0); // live duration in seconds
+  const [isPaused, setIsPaused] = useState(false); // pause state
+  const [pausedAt, setPausedAt] = useState(null); // timestamp when paused
+  const [totalPausedMs, setTotalPausedMs] = useState(0); // accumulated paused time
 
   // === 1) Load initial data (workout + sets) and refresh on demand ===
 
@@ -56,6 +61,7 @@ export function useActiveWorkout(userId, workoutId) {
       setError('Could not load workout');
       setWorkout(null);
       setSets([]);
+      setNote('');
     } finally {
       setLoading(false);
     }
@@ -66,10 +72,58 @@ export function useActiveWorkout(userId, workoutId) {
     loadWorkout();
   }, [loadWorkout]);
 
+  // Drive a 1-second ticking timer from startedAt. Stops when workout ends or is paused.
+  useEffect(() => {
+    if (!workout?.startedAt || workout?.endedAt || isPaused) {
+      return;
+    }
+    
+    const startMs = new Date(workout.startedAt).getTime();
+    
+    const tick = () => {
+      const now = Date.now();
+      const elapsed = now - startMs - totalPausedMs;
+      const sec = Math.max(0, Math.floor(elapsed / 1000));
+      setDurationSec(sec);
+    };
+    
+    tick(); // Initial tick
+    const id = setInterval(tick, 1000);
+    
+    return () => {
+      clearInterval(id);
+    };
+  }, [workout?.startedAt, workout?.endedAt, isPaused, totalPausedMs]);
+
+  // Throttle-persist duration to backend every ~30 seconds while active
+  useEffect(() => {
+    if (!workoutId || !workout?.startedAt || workout?.endedAt) return;
+    // simple throttle: save on multiples of 30 seconds
+    if (durationSec > 0 && durationSec % 30 === 0) {
+      updateWorkoutDuration(workoutId, durationSec).catch(() => {});
+    }
+  }, [durationSec, workoutId, workout?.startedAt, workout?.endedAt]);
+
   // Expose a public refresh function so the UI can manually reload if needed.
   const refresh = useCallback(() => {
     return loadWorkout();
   }, [loadWorkout]);
+
+  // Pause the timer
+  const pause = useCallback(() => {
+    if (isPaused || !workout?.startedAt || workout?.endedAt) return;
+    setIsPaused(true);
+    setPausedAt(Date.now());
+  }, [isPaused, workout?.startedAt, workout?.endedAt]);
+
+  // Resume the timer
+  const resume = useCallback(() => {
+    if (!isPaused || !pausedAt) return;
+    const pauseDuration = Date.now() - pausedAt;
+    setTotalPausedMs(prev => prev + pauseDuration);
+    setIsPaused(false);
+    setPausedAt(null);
+  }, [isPaused, pausedAt]);
 
   // Optimistic rename
   const renameWorkout = useCallback(async (name) => {
@@ -85,6 +139,24 @@ export function useActiveWorkout(userId, workoutId) {
     } catch (e) {
       // rollback on error
       setWorkout((w) => (w ? { ...w, workoutName: prev } : w));
+      throw e;
+    }
+  }, [workoutId, workout]);
+
+  // Optimistic note update
+  const updateNote = useCallback(async (note) => {
+    if (!workoutId) throw new Error('Missing workoutId');
+    const newNote = String(note ?? '').trim();
+    const prev = workout?.note ?? '';
+
+    // optimistic local state
+    setWorkout((w) => (w ? { ...w, note: newNote } : w));
+
+    try {
+      await updateWorkoutNote(workoutId, newNote);
+    } catch (e) {
+      // rollback on error
+      setWorkout((w) => (w ? { ...w, note: prev } : w));
       throw e;
     }
   }, [workoutId, workout]);
@@ -195,12 +267,13 @@ export function useActiveWorkout(userId, workoutId) {
         workoutId,
         workoutName,
         note,
+        duration: durationSec,
       });
 
       setWorkout(updated);
       return updated;
     },
-    [workoutId]
+    [workoutId, durationSec]
   );
 
   // === 6) group sets by exercise ===
@@ -229,7 +302,12 @@ export function useActiveWorkout(userId, workoutId) {
     error,
     workout,
     sets,
+    note,
     setsByExercise,
+    durationSec,
+    isPaused,
+    pause,
+    resume,
     loadWorkout,
     renameWorkout,
     refresh,

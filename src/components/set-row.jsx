@@ -64,7 +64,7 @@ export default function SetRow({ set, index, onRemove, onChange }) {
   };
 
   return (
-    <View style={styles.row}>
+    <View style={completed ? styles.rowCompleted : styles.row}>
       <View style={styles.deleteColumn}>
         <Pressable onPress={onRemove} hitSlop={10}>
           {({ pressed }) => (
@@ -118,6 +118,15 @@ const getStyles = (theme) => StyleSheet.create({
     borderBottomColor: '#666666',
     borderBottomWidth: 1,
   },
+  rowCompleted: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomColor: '#666666',
+    borderBottomWidth: 1,
+    opacity: 0.5,
+  },
   // Must match ExerciseCard
   deleteColumn: {
     width: 50,
@@ -148,6 +157,7 @@ const getStyles = (theme) => StyleSheet.create({
     borderRadius: 0,
     width: '80%',
     color: theme.text,
+    fontWeight: '500',
     backgroundColor: theme.background,
     textAlign: 'center',
   },

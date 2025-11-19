@@ -21,7 +21,6 @@ export default function ThemedCheckbox({
 
   return (
     <Pressable
-      disabled={disabled}
       onPress={() => onChange?.(!value)}
       style={({ pressed }) => [
         styles.box,
@@ -29,12 +28,8 @@ export default function ThemedCheckbox({
           width: size,
           height: size,
           borderColor: theme.border,
-          backgroundColor: value
-            ? theme.accent
-            : pressed
-              ? theme.secondary
-              : theme.background,
-          opacity: disabled ? 0.5 : 1,
+          backgroundColor: value ? theme.success : theme.background,
+          opacity: pressed ? 0.5 : 1,
         },
       ]}
       hitSlop={6}

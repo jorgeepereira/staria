@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext.jsx";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { FontAwesome6, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Redirect, Tabs } from "expo-router";
 import { useColorScheme } from "react-native";
 
@@ -8,12 +8,12 @@ import { useColorScheme } from "react-native";
 import { darkTheme, lightTheme } from "@/constants/theme.js";
 
 const TabLayout = () => {
+  // auth logic
+  const { user } = useAuth();
+  
   // theme logic
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
-
-  // auth logic
-  const { user } = useAuth();
   
   if (!user) {
     // aka if a user is NOT already logged in (null), send them to (auth)
@@ -58,8 +58,7 @@ const TabLayout = () => {
             color={focused ? theme.text : theme.textSecondary}
           />}}
       />
-      
-
+    
       <Tabs.Screen 
         name="strategy" 
         options={{ title: "Strategy", tabBarIcon: ({ focused }) =>
@@ -71,11 +70,11 @@ const TabLayout = () => {
       />
 
       <Tabs.Screen 
-        name="start" 
-        options={{ title: "Start", tabBarIcon: ({ focused }) =>
-        <MaterialCommunityIcons 
-          name={focused ? 'plus-box' : 'plus'}
-          size={28} 
+        name="exercises" 
+        options={{ title: "Exercises", tabBarIcon: ({ focused }) =>
+        <FontAwesome6
+          name={'dumbbell'}
+          size={22} 
           color={focused ? theme.text : theme.textSecondary}
         />}}
       />
@@ -85,8 +84,8 @@ const TabLayout = () => {
         options={{ 
           title: "Active Workout",
           headerShown: false,
-          href: null, 
-          tabBarStyle: { display: 'none' } }}
+          tabBarStyle: { display: 'none' },
+          href: null }}
       />
 
     </Tabs>
