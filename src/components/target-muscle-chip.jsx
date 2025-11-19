@@ -1,5 +1,4 @@
 import { darkTheme, lightTheme } from '@/constants/theme.js';
-import { useMemo } from 'react';
 import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
 import ThemedText from './themed-text.jsx';
 
@@ -20,33 +19,37 @@ export default function TargetMuscleChip({ group, onPress, style, textStyle, com
 
   // Map muscle groups to brand colors (adjust to taste)
   const MUSCLE_COLORS = {
-    chest: '#ef4444',       // red-500
-    back: '#3b82f6',        // blue-500
-    rearDelts: '#f59e0b',  // amber-500
-    frontDelts: '#f59e0b',   // amber-500
-    sideDelts: '#f59e0b',    // amber-500
-    quads: '#22c55e',        // green-500
-    glutes: '#ec4899',      // pink-500
-    biceps: '#a855f7',      // purple-500
-    triceps: '#6366f1',     // indigo-500
-    abs: '#14b8a6',         // teal-500
-    calves: '#10b981',      // emerald-500
-    forearms: '#64748b',    // slate-500
-  };
+  chest:       '#F87171', // soft red
+  back:        '#60A5FA', // soft blue
+  frontdelts:  '#FBBF24', // amber-400 — bright, warm
+  sidedelts:   '#F59E0B', // amber-500 — slightly deeper
+  reardelts:   '#D97706', // amber-600 — rich, darker
+  quads:       '#4ADE80', // soft green
+  glutes:      '#F472B6', // soft pink
+  biceps:      '#C084FC', // soft purple
+  triceps:     '#A78BFA', // soft indigo
+  abs:         '#2DD4BF', // soft teal
+  calves:      '#34D399', // soft emerald
+  forearms:    '#94A3B8', // clean slate
+  hamstrings:  '#818CF8', // modern indigo blue
+};
 
   // Resolve background color for the group, fallback to theme.accent
-  const backgroundColor = MUSCLE_COLORS[group] || theme.accent;
+  const normalizedGroup = group?.toLowerCase().replace(/[\s-]/g, '') || '';
+  const baseColor = MUSCLE_COLORS[normalizedGroup] || theme.accent;
 
-  // Decide readable text color based on background brightness
-  const textColor = useMemo(() => {
-    const hex = backgroundColor.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16) / 255;
-    const g = parseInt(hex.substring(2, 4), 16) / 255;
-    const b = parseInt(hex.substring(4, 6), 16) / 255;
-    // relative luminance
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    return lum > 0.55 ? '#0f172a' /* slate-900 */ : '#ffffff';
-  }, [backgroundColor]);
+  // Helper to convert hex to rgba
+  const hexToRgba = (hex, alpha) => {
+    if (!hex) return 'transparent';
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  // Modern style: light transparent bg, solid border
+  const backgroundColor = hexToRgba(baseColor, 0.40); // 15% opacity
+  const borderColor = baseColor;
 
   const Container = onPress ? Pressable : View;
   
@@ -59,16 +62,23 @@ export default function TargetMuscleChip({ group, onPress, style, textStyle, com
         styles.chip,
         {
           backgroundColor,
-          borderColor: theme.border,
+          borderColor,
+          borderWidth: 1.5,
           paddingHorizontal: compact ? 8 : 12,
           paddingVertical: compact ? 4 : 6,
-        },
+          // Shadow
+          shadowColor: baseColor,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 4,
+          elevation: 3,
+        }, 
         style,
       ]}
     >
       <ThemedText
         style={[
-          { color: textColor, fontWeight: '600', fontSize: compact ? 10 : 12 },
+          { color: theme.text, fontWeight: '700', fontSize: compact ? 10 : 12 },
           textStyle,
         ]}
       >
@@ -79,4 +89,9 @@ export default function TargetMuscleChip({ group, onPress, style, textStyle, com
 }
 
 const styles = StyleSheet.create({
+  chip: {
+    borderRadius: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  }
 });

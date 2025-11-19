@@ -23,7 +23,7 @@ const TabLayout = () => {
   // if the user check passes, render all of the tabs content 
   return (
     <Tabs screenOptions={{ 
-      headerShown: true,
+      headerShown: false,
       headerStyle: { backgroundColor: theme.background },
       headerTintColor: theme.text,
       headerTitleStyle: { fontFamily: 'Orbitron', fontWeight: 'bold' },
@@ -71,7 +71,9 @@ const TabLayout = () => {
 
       <Tabs.Screen 
         name="exercises" 
-        options={{ title: "Exercises", tabBarIcon: ({ focused }) =>
+        options={{ 
+          title: "Exercises", 
+          tabBarIcon: ({ focused }) =>
         <FontAwesome6
           name={'dumbbell'}
           size={22} 

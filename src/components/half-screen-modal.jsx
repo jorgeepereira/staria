@@ -1,7 +1,7 @@
 import { darkTheme, lightTheme } from '@/constants/theme.js';
-import { Modal, StyleSheet, useColorScheme, View } from 'react-native';
+import { Modal, StyleSheet, TouchableWithoutFeedback, useColorScheme, View } from 'react-native';
 
-const HalfScreenModal = ({ visible, onClose, children }) => {
+const HalfScreenModal = ({ visible, onClose, children, height = '50%' }) => {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const styles = getStyles(theme);
@@ -14,7 +14,10 @@ const HalfScreenModal = ({ visible, onClose, children }) => {
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={{ flex: 1, width: '100%' }} />
+        </TouchableWithoutFeedback>
+        <View style={[styles.modalContent, { height }]}>
           {children}
         </View>
       </View>
@@ -35,7 +38,6 @@ const getStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.cardBackground,
     padding: 20,
     width: '100%',
-    height: '50%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     alignItems: 'center',

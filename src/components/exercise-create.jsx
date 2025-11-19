@@ -4,8 +4,9 @@ import ThemedText from '@/components/themed-text.jsx';
 import ThemedView from '@/components/themed-view.jsx';
 import { darkTheme, lightTheme } from '@/constants/theme.js';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import ThemedTextInput from './themed-textInput';
+
 
 /**
  * Small centered modal to create an Exercise.
@@ -95,10 +96,10 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
               }}
             />
           <Pressable
-            onPress={() => { setMuscleOpen(o => !o); setTypeOpen(false); }}
+            onPress={() => { Keyboard.dismiss(); setMuscleOpen(o => !o); setTypeOpen(false); }}
             style={[styles.select, { borderColor: theme.border, backgroundColor: theme.background }]}
           >
-            <ThemedText secondary={!targetMuscle}>{targetMuscle || 'Select target muscle'}</ThemedText>
+            <ThemedText secondary={!targetMuscle}>{targetMuscle || 'e.g., Chest'}</ThemedText>
           </Pressable>
           {muscleOpen && (
             <ScrollView style={styles.menu}>
@@ -132,10 +133,10 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
               }}
             />
           <Pressable
-            onPress={() => { setTypeOpen(o => !o); setMuscleOpen(false); }}
+            onPress={() => { Keyboard.dismiss(); setTypeOpen(o => !o); setMuscleOpen(false); }}
             style={[styles.select, { borderColor: theme.border, backgroundColor: theme.background }]}
           >
-            <ThemedText secondary={!exType}>{exType || 'Select type'}</ThemedText>
+            <ThemedText secondary={!exType}>{exType || 'e.g., Barbell'}</ThemedText>
           </Pressable>
           {typeOpen && (
             <ScrollView style={styles.menu}>
@@ -158,13 +159,13 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <ThemedButton
-              style={[styles.btn, { backgroundColor: theme.error, flex: 1 }]}
+              style={styles.btnJustText}
               onPress={onClose}
             >
-              <ThemedText style={{ fontWeight: '800' }}>Cancel</ThemedText>
+              <ThemedText style={{ color: theme.error, fontWeight: '800' }}>Cancel</ThemedText>
             </ThemedButton>
             <ThemedButton
-              style={[styles.btn, { backgroundColor: theme.accent, flex: 1, opacity: canCreate && !loading ? 1 : 0.6 }]}
+              style={[styles.btnCreate, { opacity: canCreate && !loading ? 1 : 0.6 }]}
               disabled={!canCreate || loading}
               onPress={submit}
             >
@@ -225,10 +226,20 @@ const getStyles = (theme) => StyleSheet.create({
     paddingHorizontal: 12,
     borderBottomWidth: 1,
   },
-  btn: {
+  btnCreate: {
+    flex: 1,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.accent,
+  },
+  btnJustText: {
+    paddingVertical: 14,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
 });
