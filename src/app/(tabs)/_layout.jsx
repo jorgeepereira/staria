@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext.jsx";
-import { FontAwesome6, MaterialCommunityIcons } from "@expo/vector-icons";
+import { FontAwesome6, MaterialCommunityIcons, Octicons } from "@expo/vector-icons";
 import { Redirect, Tabs } from "expo-router";
 import { useColorScheme } from "react-native";
 
@@ -23,6 +23,7 @@ const TabLayout = () => {
   // if the user check passes, render all of the tabs content 
   return (
     <Tabs screenOptions={{ 
+      tabBarShowLabel: false,
       headerShown: false,
       headerStyle: { backgroundColor: theme.background },
       headerTintColor: theme.text,
@@ -40,11 +41,11 @@ const TabLayout = () => {
       <Tabs.Screen 
         name="index" 
         options={{ 
-          title: "Dashboard", 
+          title: "Home",
           tabBarIcon: ({ focused }) =>
-        <MaterialCommunityIcons 
-          name={focused ? 'view-dashboard' : 'view-dashboard-outline'}
-          size={24} 
+        <Octicons 
+          name={focused ? 'home-fill' : 'home'}
+          size={26} 
           color={focused ? theme.text : theme.textSecondary}
         />}}
       />
@@ -53,7 +54,7 @@ const TabLayout = () => {
         name="log" 
         options={{ title: "Log", tabBarIcon: ({ focused }) => 
           <MaterialCommunityIcons 
-            size={24}
+            size={27}
             name={focused ? 'clipboard-text' : 'clipboard-text-outline'}
             color={focused ? theme.text : theme.textSecondary}
           />}}
@@ -64,7 +65,7 @@ const TabLayout = () => {
         options={{ title: "Strategy", tabBarIcon: ({ focused }) =>
         <MaterialCommunityIcons 
           name={'strategy'}
-          size={24} 
+          size={26} 
           color={focused ? theme.text : theme.textSecondary}
         />}}
       />
@@ -76,7 +77,7 @@ const TabLayout = () => {
           tabBarIcon: ({ focused }) =>
         <FontAwesome6
           name={'dumbbell'}
-          size={22} 
+          size={24} 
           color={focused ? theme.text : theme.textSecondary}
         />}}
       />

@@ -36,7 +36,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   modalContent: {
     backgroundColor: theme.cardBackground,
-    padding: 20,
+    padding: 16,
     width: '100%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,

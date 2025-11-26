@@ -8,7 +8,8 @@ export const lightTheme = {
   border: '#e5e7eb',
   success: '#22c55e',
   error: '#ef4444',
-  textInput: '#14213d'
+  textInput: '#14213d',
+  cardBackground: '#ffffff',
 };
 
 export const darkTheme = {

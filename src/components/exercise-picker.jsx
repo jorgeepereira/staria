@@ -3,13 +3,14 @@ import ThemedView from '@/components/themed-view.jsx';
 import { darkTheme, lightTheme } from '@/constants/theme.js';
 import { useAuth } from '@/contexts/AuthContext';
 import { createExercise, deleteExercise, getExercisesByUserId } from '@/services/exercises';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   TextInput,
   useColorScheme
@@ -18,6 +19,26 @@ import { SwipeListView } from 'react-native-swipe-list-view';
 import ExerciseCreate from './exercise-create';
 import ExerciseTypeChip from './exercise-type-chip';
 import TargetMuscleChip from './target-muscle-chip';
+
+const MUSCLE_OPTIONS = [
+  'Abs', 'Back', 'Biceps', 'Chest', 'Forearms', 'Glutes', 'Quads', 'Triceps', 'Calves', 'Hamstrings', 'Front Delts', 'Side Delts', 'Rear Delts'
+];
+
+const MUSCLE_COLORS = {
+  chest:       '#F87171', // soft red
+  back:        '#60A5FA', // soft blue
+  frontDelts:  '#FBBF24', // amber-400 — bright, warm
+  sideDelts:   '#F59E0B', // amber-500 — slightly deeper
+  rearDelts:   '#D97706', // amber-600 — rich, darker
+  quads:       '#4ADE80', // soft green
+  glutes:      '#F472B6', // soft pink
+  biceps:      '#C084FC', // soft purple
+  triceps:     '#A78BFA', // soft indigo
+  abs:         '#2DD4BF', // soft teal
+  calves:      '#34D399', // soft emerald
+  forearms:    '#94A3B8', // clean slate
+  hamstrings:  '#818CF8', // modern indigo blue
+};
 
 /**
  * ExercisePicker
@@ -41,6 +62,8 @@ const ExercisePicker = ({
   const [loading, setLoading] = useState(false);
   const [exercises, setExercises] = useState([]);
   const [filter, setFilter] = useState('');
+  const [muscleFilter, setMuscleFilter] = useState(null);
+  const [showSearch, setShowSearch] = useState(false);
 
   const { user } = useAuth();
 
@@ -100,9 +123,11 @@ const ExercisePicker = ({
     ]);
   }, []);
 
-  const filtered = filter
-    ? exercises.filter(e => e.name.toLowerCase().includes(filter.toLowerCase()))
-    : exercises;
+  const filtered = exercises.filter(e => {
+    const matchesName = filter ? e.name.toLowerCase().includes(filter.toLowerCase()) : true;
+    const matchesMuscle = muscleFilter ? e.targetMuscle.toLowerCase() === muscleFilter.toLowerCase() : true;
+    return matchesName && matchesMuscle;
+  });
 
   return (
     <Modal
@@ -120,25 +145,84 @@ const ExercisePicker = ({
               Exercises
             </ThemedText>
 
-            <Pressable onPress={() => setShowCreate(true)}>
-              {({ pressed }) => (
-              <Ionicons 
-                name={pressed ? "create" : "create-outline"}
-                size={32}
-                color={theme.text}
-              />
-              )}
-            </Pressable>
+            <ThemedView style={styles.headerButtonContainer}>
+              <Pressable onPress={() => setShowCreate(true)}>
+                {({ pressed }) => (
+                <MaterialCommunityIcons 
+                  name={pressed ? "plus-box" : "plus"}
+                  size={32}
+                  color={theme.text}
+                />
+                )}
+              </Pressable>
+              <Pressable onPress={() => {
+                if (showSearch) {
+                  setShowSearch(false);
+                  setFilter('');
+                } else {
+                  setShowSearch(true);
+                }
+              }}>
+                <FontAwesome name={showSearch ? "close" : "search"} size={showSearch ? 28 : 24} color={showSearch ? theme.error : theme.text} />
+              </Pressable>
+            </ThemedView>
 
           </ThemedView>
 
-          <TextInput
-            placeholder="Search..."
-            value={filter}
-            onChangeText={setFilter}
-            style={styles.input}
-            placeholderTextColor={theme.textSecondary}
-          />
+          {showSearch && (
+          <ThemedView style={styles.searchContainer}>
+            <TextInput
+              placeholder="Search..."
+              value={filter}
+              onChangeText={setFilter}
+              style={styles.input}
+              placeholderTextColor={theme.textSecondary}
+              autoFocus
+            />
+            {filter.length > 0 && (
+              <Pressable onPress={() => setFilter('')} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+              </Pressable>
+            )}
+          </ThemedView>
+          )}
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
+            <Pressable
+              onPress={() => setMuscleFilter(null)}
+              style={[
+                styles.filterChip,
+                !muscleFilter && { backgroundColor: theme.accent, borderColor: theme.accent }
+              ]}
+            >
+              <ThemedText style={{ color: !muscleFilter ? '#fff' : theme.text, fontWeight: '600', fontSize: 12 }}>All</ThemedText>
+            </Pressable>
+            {MUSCLE_OPTIONS.map(m => {
+              const key = m.replace(/ /g, '').replace(/^./, c => c.toLowerCase());
+              const color = MUSCLE_COLORS[key] || theme.accent;
+              const isSelected = muscleFilter === m;
+              
+              return (
+                <Pressable
+                  key={m}
+                  onPress={() => setMuscleFilter(isSelected ? null : m)}
+                  style={[
+                    styles.filterChip,
+                    { borderColor: color },
+                    isSelected && { backgroundColor: color }
+                  ]}
+                >
+                  <ThemedText style={{ 
+                    color: isSelected ? '#fff' : color, 
+                    fontWeight: '600', 
+                    fontSize: 12 
+                  }}>
+                    {m}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </ThemedView>
 
         {loading && (
@@ -216,31 +300,40 @@ const getStyles = theme =>
       backgroundColor: theme.cardBackground,
     },
     headerContainer: {
-      padding: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
       borderBottomColor: theme.border,
       borderWidth: 1,
+    },
+    headerButtonContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
     },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 12,
       backgroundColor: 'transparent',
     },
-    scrollView: {
-      flex: 1,
-      width: '100%',
-      padding: 8,
-    },
-    input: {
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: theme.cardBackground,
-      color: theme.text,
       borderWidth: 1,
       borderColor: theme.border,
       borderRadius: 2,
       paddingHorizontal: 12,
+      marginTop: 12,
+    },
+    input: {
+      flex: 1,
+      color: theme.text,
       paddingVertical: 10,
       fontSize: 16,
+    },
+    clearButton: {
+      marginLeft: 8,
     },
     // SwipeListView
     listContent: {
@@ -285,5 +378,15 @@ const getStyles = theme =>
       flexDirection: 'column',
       alignItems: 'flex-end',
       gap: 8,
+    },
+    filterChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.border,
+      marginRight: 8,
+      backgroundColor: theme.background,
+      marginBottom: 4,
     },
   });

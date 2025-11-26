@@ -1,5 +1,6 @@
 import { databases } from "@/lib/appwrite";
 import { ID, Permission, Query, Role } from "react-native-appwrite";
+import { getExercisesByUserId } from './exercises';
 
 const DB_ID = "6910e46a00308ce05924";
 const WORKOUTS_COLLECTION_ID = "workouts";
@@ -145,6 +146,30 @@ export async function finishWorkout({ workoutId, workoutName, note = '', duratio
   return updatedWorkout;
 }
 
+// Delete a workout and all its sets
+export async function deleteWorkout(workoutId) {
+  // 1. Delete all sets associated with this workout
+  const setsRes = await databases.listDocuments(
+    DB_ID,
+    SETS_COLLECTION_ID,
+    [
+      Query.equal("workoutId", workoutId),
+    ]
+  );
+
+  const deletePromises = setsRes.documents.map(set => 
+    databases.deleteDocument(DB_ID, SETS_COLLECTION_ID, set.$id)
+  );
+  await Promise.all(deletePromises);
+
+  // 2. Delete the workout document
+  return await databases.deleteDocument(
+    DB_ID,
+    WORKOUTS_COLLECTION_ID,
+    workoutId
+  );
+}
+
 // List workouts for a specific user
 export async function listWorkouts({ userId, limit = 20 }) {
 
@@ -205,4 +230,147 @@ export async function getSetsByWorkoutId(workoutId) {
   const sets = setsRes.documents;
 
   return sets;
+}
+
+// Fetch completed workouts with their sets for the log screen
+export async function getCompletedWorkouts(userId) {
+  // 1. List workouts that have ended
+  const workoutsRes = await databases.listDocuments(
+    DB_ID,
+    WORKOUTS_COLLECTION_ID,
+    [
+      Query.equal("userId", userId),
+      Query.isNotNull("endedAt"), // Only completed workouts
+      Query.orderDesc("endedAt"),
+      Query.limit(20),
+    ]
+  );
+  
+  const workouts = workoutsRes.documents;
+
+  // 2. For each workout, fetch sets to build the summary
+  const workoutsWithSets = await Promise.all(workouts.map(async (workout) => {
+    const sets = await getSetsByWorkoutId(workout.$id);
+    return { ...workout, sets };
+  }));
+
+  return workoutsWithSets.filter(workout => workout.sets.length > 0);
+}
+
+export async function getUserStatistics(userId) {
+  // 1. Get total completed workouts count
+  const totalWorkoutsRes = await databases.listDocuments(
+    DB_ID,
+    WORKOUTS_COLLECTION_ID,
+    [
+      Query.equal("userId", userId),
+      Query.isNotNull("endedAt"),
+      Query.limit(1),
+    ]
+  );
+  const totalWorkouts = totalWorkoutsRes.total;
+
+  // 2. Get total sets count
+  const totalSetsRes = await databases.listDocuments(
+    DB_ID,
+    SETS_COLLECTION_ID,
+    [
+      Query.equal("userId", userId),
+      Query.limit(1),
+    ]
+  );
+  const totalSets = totalSetsRes.total;
+
+  // 3. Get completed workouts this week & calculate average duration (from last 100)
+  // Calculate start of the week (Monday)
+  const now = new Date();
+  const day = now.getDay(); // 0 is Sunday
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+  
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(diff);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  // Fetch recent workouts and filter in memory to ensure accurate local time comparison
+  const recentWorkoutsRes = await databases.listDocuments(
+    DB_ID,
+    WORKOUTS_COLLECTION_ID,
+    [
+      Query.equal("userId", userId),
+      Query.isNotNull("endedAt"),
+      Query.orderDesc("endedAt"),
+      Query.limit(100),
+    ]
+  );
+
+  const recentWorkouts = recentWorkoutsRes.documents;
+
+  const workoutsThisWeek = recentWorkouts.filter(workout => {
+    const workoutDate = new Date(workout.endedAt);
+    return workoutDate >= startOfWeek;
+  }).length;
+
+  // Calculate averages
+  const averageSets = totalWorkouts > 0 ? Math.round(totalSets / totalWorkouts) : 0;
+  
+  const totalDuration = recentWorkouts.reduce((acc, curr) => acc + (curr.duration || 0), 0);
+  const averageDuration = recentWorkouts.length > 0 ? Math.round(totalDuration / recentWorkouts.length) : 0;
+
+  // 4. Calculate sets per target muscle
+  // Fetch all exercises to map exerciseId -> targetMuscle
+  const exercises = await getExercisesByUserId(userId);
+  const exerciseMap = {};
+  exercises.forEach(ex => {
+    exerciseMap[ex.$id] = ex.targetMuscle;
+  });
+
+  // Fetch a large batch of sets (limit 1000 for now)
+  const allSetsRes = await databases.listDocuments(
+    DB_ID,
+    SETS_COLLECTION_ID,
+    [
+      Query.equal("userId", userId),
+      Query.limit(1000),
+    ]
+  );
+  
+  // Initialize with standard muscles
+  const STANDARD_MUSCLES = [
+    "Chest", "Back", "Quads", "Hamstrings", "Glutes", "Calves", 
+    "Biceps", "Triceps", "Forearms", "Abs", 
+    "Front Delts", "Side Delts", "Rear Delts"
+  ];
+
+  const muscleCounts = {};
+  STANDARD_MUSCLES.forEach(m => {
+    const key = m.toLowerCase().replace(/[\s-]/g, '');
+    muscleCounts[key] = { name: m, count: 0 };
+  });
+
+  allSetsRes.documents.forEach(set => {
+    const muscle = exerciseMap[set.exerciseId];
+    if (muscle) {
+      const key = muscle.toLowerCase().replace(/[\s-]/g, '');
+      if (muscleCounts[key]) {
+        muscleCounts[key].count += 1;
+      } else {
+        // Handle unknown muscles (e.g. custom ones not in standard list)
+        muscleCounts[key] = { name: muscle, count: 1 };
+      }
+    }
+  });
+
+  // Convert to array and sort by count desc
+  const muscleStats = Object.values(muscleCounts).sort((a, b) => b.count - a.count);
+
+  // Add 'All' category with total sets count
+  muscleStats.unshift({ name: 'Total', count: totalSets });
+
+  return {
+    totalWorkouts,
+    workoutsThisWeek,
+    averageSets,
+    averageDuration,
+    muscleStats
+  };
 }

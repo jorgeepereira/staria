@@ -27,10 +27,11 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
     'Abs', 'Back', 'Biceps', 'Chest', 'Forearms', 'Glutes', 'Quads', 'Triceps', 'Calves', 'Hamstrings', 'Front Delts', 'Side Delts', 'Rear Delts'
   ], []);
   const TYPE_OPTIONS = useMemo(() => [
-    'Barbell', 'Machine', 'Cable', 'Dumbbell', 'Bodyweight', 'Other'
+    'Barbell', 'Machine', 'Cable', 'Dumbbell', 'Bodyweight', 'Smith', 'Other'
   ], []);
 
   const [name, setName] = useState('');
+  const [isNameFocused, setIsNameFocused] = useState(false);
   const [muscleOpen, setMuscleOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [targetMuscle, setTargetMuscle] = useState('');
@@ -58,48 +59,33 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
         {/* Card */}
         <ThemedView style={styles.card}>
           <ThemedView style={{alignItems: 'center', backgroundColor: 'transparent', marginBottom: 20}}>
-            <ThemedText heading style={{ fontFamily: 'Orbitron', fontWeight: '500'}}>
+            <ThemedText heading style={{ fontWeight: 'bold', fontSize: 24}}>
               Create Exercise
             </ThemedText>
           </ThemedView>
 
           {/* Name */}
           <ThemedText style={styles.label}>Name</ThemedText>
-          <View
-              style={{
-                width: 50, // adjust to match text width
-                height: 2,
-                backgroundColor: theme.accent,
-                borderRadius: 1,
-                marginBottom: 8,
-              }}
-            />
           <ThemedTextInput
             value={name}
             onChangeText={setName}
+            onFocus={() => setIsNameFocused(true)}
+            onBlur={() => setIsNameFocused(false)}
             placeholder="e.g., Bench Press"
+            enterKeyType="done"
             placeholderTextColor={theme.textSecondary}
-            style={styles.input}
+            style={[styles.input, isNameFocused && { borderColor: theme.text }]}
           />
 
-          <Spacer height={12} />
+          <Spacer height={16} />
 
           {/* Target Muscle dropdown */}
           <ThemedText style={styles.label}>Target Muscle</ThemedText>
-          <View
-              style={{
-                width: 110, // adjust to match text width
-                height: 2,
-                backgroundColor: theme.accent,
-                borderRadius: 1,
-                marginBottom: 8,
-              }}
-            />
           <Pressable
             onPress={() => { Keyboard.dismiss(); setMuscleOpen(o => !o); setTypeOpen(false); }}
-            style={[styles.select, { borderColor: theme.border, backgroundColor: theme.background }]}
+            style={[styles.select, { borderColor: theme.border, backgroundColor: theme.cardBackground }]}
           >
-            <ThemedText secondary={!targetMuscle}>{targetMuscle || 'e.g., Chest'}</ThemedText>
+            <ThemedText secondary={!targetMuscle}>{targetMuscle || 'Select Muscle'}</ThemedText>
           </Pressable>
           {muscleOpen && (
             <ScrollView style={styles.menu}>
@@ -109,44 +95,7 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
                   onPress={() => { setTargetMuscle(opt); setMuscleOpen(false); }}
                   style={({ pressed }) => [
                     styles.menuItem,
-                    { backgroundColor: pressed ? theme.secondary : theme.background, borderColor: theme.border },
-                  ]}
-                >
-                  <ThemedText>{opt}</ThemedText>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
-
-          <Spacer height={12} />
-
-          {/* Type dropdown */}
-          <ThemedText style={styles.label}>Equipment</ThemedText>
-          {/* Underline */}
-            <View
-              style={{
-                width: 85, // adjust to match text width
-                height: 2,
-                backgroundColor: theme.accent,
-                borderRadius: 1,
-                marginBottom: 8,
-              }}
-            />
-          <Pressable
-            onPress={() => { Keyboard.dismiss(); setTypeOpen(o => !o); setMuscleOpen(false); }}
-            style={[styles.select, { borderColor: theme.border, backgroundColor: theme.background }]}
-          >
-            <ThemedText secondary={!exType}>{exType || 'e.g., Barbell'}</ThemedText>
-          </Pressable>
-          {typeOpen && (
-            <ScrollView style={styles.menu}>
-              {TYPE_OPTIONS.map(opt => (
-                <Pressable
-                  key={opt}
-                  onPress={() => { setExType(opt); setTypeOpen(false); }}
-                  style={({ pressed }) => [
-                    styles.menuItem,
-                    { backgroundColor: pressed ? theme.secondary : theme.background, borderColor: theme.border },
+                    { backgroundColor: pressed ? theme.background : theme.cardBackground, borderColor: theme.border },
                   ]}
                 >
                   <ThemedText>{opt}</ThemedText>
@@ -157,22 +106,54 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
 
           <Spacer height={16} />
 
-          <View style={{ flexDirection: 'row', gap: 10 }}>
+          {/* Type dropdown */}
+          <ThemedText style={styles.label}>Equipment</ThemedText>
+          <Pressable
+            onPress={() => { Keyboard.dismiss(); setTypeOpen(o => !o); setMuscleOpen(false); }}
+            style={[styles.select, { borderColor: theme.border, backgroundColor: theme.cardBackground }]}
+          >
+            <ThemedText secondary={!exType}>{exType || 'Select Equipment'}</ThemedText>
+          </Pressable>
+          {typeOpen && (
+            <ScrollView style={styles.menu}>
+              {TYPE_OPTIONS.map(opt => (
+                <Pressable
+                  key={opt}
+                  onPress={() => { setExType(opt); setTypeOpen(false); }}
+                  style={({ pressed }) => [
+                    styles.menuItem,
+                    { backgroundColor: pressed ? theme.background : theme.cardBackground, borderColor: theme.border },
+                  ]}
+                >
+                  <ThemedText>{opt}</ThemedText>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+
+          <Spacer height={24} />
+
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
             <ThemedButton
               style={styles.btnJustText}
               onPress={onClose}
             >
-              <ThemedText style={{ color: theme.error, fontWeight: '800' }}>Cancel</ThemedText>
+              <ThemedText style={{ color: theme.error, fontWeight: '600' }}>Cancel</ThemedText>
             </ThemedButton>
-            <ThemedButton
-              style={[styles.btnCreate, { opacity: canCreate && !loading ? 1 : 0.6 }]}
+
+            <Pressable
+              style={({pressed}) => [
+                styles.btnCreate, 
+                pressed && styles.buttonPressed,
+                (!canCreate || loading) && styles.btnDisabled
+              ]}
               disabled={!canCreate || loading}
               onPress={submit}
             >
-              <ThemedText style={{ fontWeight: '800' }}>
+              <ThemedText style={{ color: theme.accent, fontWeight: 'bold' }}>
                 {loading ? 'Creating...' : 'Create'}
               </ThemedText>
-            </ThemedButton>
+            </Pressable>
           </View>
         </ThemedView>
       </View>
@@ -183,7 +164,7 @@ export default function ExerciseCreate({ visible, onClose, onCreate, loading = f
 const getStyles = (theme) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(12, 11, 11, 0.90)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -191,52 +172,71 @@ const getStyles = (theme) => StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 420,
-    borderRadius: 16,
-    padding: 16,
-    backgroundColor: '#212121',
+    borderRadius: 12,
+    padding: 20,
+    backgroundColor: theme.background,
+    borderWidth: 0.5,
+    borderColor: theme.border,
   },
   label: {
     marginBottom: 2,
     fontWeight: '600',
     color: theme.text,
+    fontSize: 12,
+    textTransform: 'uppercase',
   },
   input: {
     borderRadius: 4,
     paddingHorizontal: 12,
-    paddingVertical: 16,
+    marginTop: 4,
+    paddingVertical: 12,
     color: theme.text,
-    backgroundColor: theme.background,
+    backgroundColor: theme.cardBackground,
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   select: {
+    marginTop: 4,
     borderRadius: 4,
     paddingHorizontal: 12,
-    paddingVertical: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
   },
   menu: {
     maxHeight: 200,
     marginTop: 6,
-    borderRadius: 2,
-    borderColor: theme.secondary,
-    borderWidth: 2,
-    backgroundColor: theme.background,
+    borderRadius: 8,
+    borderColor: theme.text,
+    borderWidth: 1,
+    backgroundColor: theme.cardBackground,
   },
   menuItem: {
-    marginHorizontal: 12,
     paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
   },
   btnCreate: {
     flex: 1,
     paddingVertical: 14,
-    borderRadius: 6,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.accent,
+    borderWidth: 1,
+    borderColor: theme.accent,
+    backgroundColor: theme.accent + '20',
+  },
+  btnDisabled: {
+    opacity: 0.5,
+    borderColor: theme.accent,
+    backgroundColor: theme.cardBackground,
+  },
+  buttonPressed: {
+    opacity: 0.7,
   },
   btnJustText: {
-    paddingVertical: 14,
-    borderRadius: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',

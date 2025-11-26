@@ -1,4 +1,5 @@
 import { darkTheme, lightTheme } from '@/constants/theme.js';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View, useColorScheme } from 'react-native';
 
@@ -31,6 +32,7 @@ export default function SetRow({ set, index, onRemove, onChange }) {
   const [reps, setReps] = useState('');
   const [rpe, setRpe] = useState('');
   const [completed, setCompleted] = useState(false);
+  const [focusedField, setFocusedField] = useState(null); // 'weight' | 'reps' | null
 
   // Keep locals in sync when parent updates the set
   useEffect(() => {
@@ -47,14 +49,19 @@ export default function SetRow({ set, index, onRemove, onChange }) {
     const val = numberOrNull(weight);
     onChange?.({ weight: val });
     setWeight(displayFromNumber(val));
+    setFocusedField(null);
   };
   const commitReps = () => {
     const val = numberOrNull(reps);
     onChange?.({ reps: val });
     setReps(displayFromNumber(val));
+    setFocusedField(null);
   };
   const toggleCompleted = () => {
     const next = !completed;
+    if (next) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     setCompleted(next);
     onChange?.({
       completed: next,
@@ -81,9 +88,14 @@ export default function SetRow({ set, index, onRemove, onChange }) {
         <TextInput
           value={weight}
           onChangeText={setWeight}
+          onFocus={() => setFocusedField('weight')}
+          onBlur={() => setFocusedField(null)}
           onEndEditing={commitWeight}
           keyboardType="numeric"
-          style={styles.input}
+          style={[
+            styles.input, 
+            focusedField === 'weight' && styles.inputFocused
+          ]}
           editable={!completed}
         />
       </View>
@@ -92,9 +104,14 @@ export default function SetRow({ set, index, onRemove, onChange }) {
         <TextInput
           value={reps}
           onChangeText={setReps}
+          onFocus={() => setFocusedField('reps')}
+          onBlur={() => setFocusedField(null)}
           onEndEditing={commitReps}
           keyboardType="numeric"
-          style={styles.input}
+          style={[
+            styles.input, 
+            focusedField === 'reps' && styles.inputFocused
+          ]}
           editable={!completed}
         />
       </View>
@@ -154,11 +171,18 @@ const getStyles = (theme) => StyleSheet.create({
   input: {
     flex: 1,
     padding: 8,
-    borderRadius: 0,
+    borderRadius: 4,
     width: '80%',
     color: theme.text,
     fontWeight: '500',
+    fontFamily: 'Orbitron',
+    letterSpacing: 1,
     backgroundColor: theme.background,
     textAlign: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  inputFocused: {
+    borderColor: 'white',
   },
 });

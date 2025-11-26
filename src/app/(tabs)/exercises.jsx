@@ -6,7 +6,7 @@ import ThemedView from '@/components/themed-view.jsx';
 import { darkTheme, lightTheme } from '@/constants/theme.js';
 import { useAuth } from '@/contexts/AuthContext';
 import { createExercise, deleteExercise, getExercisesByUserId } from '@/services/exercises';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -51,28 +51,35 @@ const ExercisesScreen = () => {
   const [creating, setCreating] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [exercises, setExercises] = useState([]);
   const [filter, setFilter] = useState('');
   const [muscleFilter, setMuscleFilter] = useState(null);
+  const [showSearch, setShowSearch] = useState(false);
+
+  const loadExercises = async () => {
+    if (!userId) return;
+    try {
+      const list = await getExercisesByUserId(userId);
+      setExercises(list);
+    } catch (e) {
+      console.warn('exercises load failed', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   // Load user exercises
   useEffect(() => {
-    if (!userId) return;
-    let active = true;
-    async function load() {
-      setLoading(true);
-      try {
-        const list = await getExercisesByUserId(userId);
-        if (active) setExercises(list);
-      } catch (e) {
-        console.warn('exercises load failed', e);
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-    load();
-    return () => { active = false; };
+    setLoading(true);
+    loadExercises();
   }, [userId]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadExercises();
+  };
 
   // Create from sub-modal
   const handleCreateFromModal = useCallback(async ({ name, targetMuscle, type }) => {
@@ -122,24 +129,46 @@ const ExercisesScreen = () => {
               Exercises
             </ThemedText>
 
-            <Pressable onPress={() => setShowCreate(true)}>
-              {({ pressed }) => (
-              <Ionicons 
-                name={pressed ? "create" : "create-outline"}
-                size={32}
-                color={theme.text}
-              />
-              )}
-            </Pressable>
+            <ThemedView style={styles.headerButtonContainer}>
+              <Pressable onPress={() => setShowCreate(true)}>
+                {({ pressed }) => (
+                <MaterialCommunityIcons 
+                  name={pressed ? "plus-box" : "plus"}
+                  size={32}
+                  color={theme.text}
+                />
+                )}
+              </Pressable>
+              <Pressable onPress={() => {
+                if (showSearch) {
+                  setShowSearch(false);
+                  setFilter('');
+                } else {
+                  setShowSearch(true);
+                }
+              }}>
+                <FontAwesome name={showSearch ? "close" : "search"} size={showSearch ? 28 : 24} color={showSearch ? theme.error : theme.text} />
+              </Pressable>
+            </ThemedView>
           </ThemedView>
 
-          <TextInput
-            placeholder="Search..."
-            value={filter}
-            onChangeText={setFilter}
-            style={styles.input}
-            placeholderTextColor={theme.textSecondary}
-          />
+          {showSearch && (
+          <ThemedView style={styles.searchContainer}>
+            <TextInput
+              placeholder="Search..."
+              value={filter}
+              onChangeText={setFilter}
+              style={styles.input}
+              placeholderTextColor={theme.textSecondary}
+              autoFocus
+            />
+            {filter.length > 0 && (
+              <Pressable onPress={() => setFilter('')} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+              </Pressable>
+            )}
+          </ThemedView>
+          )}
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
             <Pressable
@@ -180,15 +209,27 @@ const ExercisesScreen = () => {
         </ThemedView>
 
         {loading && (
-          <ActivityIndicator color={theme.accent} style={{ marginTop: 20 }} />
+          <ActivityIndicator color={theme.text} size="large" style={{ flex: 1 , justifyContent: 'center', alignItems: 'center' }} />
         )}
 
-        {!loading && (
+        {!loading && filtered.length === 0 && (
+          <ThemedView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 , backgroundColor: 'transparent' }}>
+            <ThemedText secondary style={{ textAlign: 'center', fontSize: 16 }}>
+              {(filter || muscleFilter) 
+                ? "No exercises match your search." 
+                : "No exercises yet. Tap the + button to create one."}
+            </ThemedText>
+          </ThemedView>
+        )}
+
+        {!loading && filtered.length > 0 && (
           <SwipeListView
             data={filtered}
             keyExtractor={(item) => item.$id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             renderItem={({ item }) => (
               <Pressable
                 style={({ pressed }) => [
@@ -242,26 +283,40 @@ const getStyles = theme =>
       backgroundColor: theme.cardBackground,
     },
     headerContainer: {
-      padding: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
       borderBottomColor: theme.border,
       borderWidth: 1,
+    },
+    headerButtonContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
     },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 12,
       backgroundColor: 'transparent',
     },
-    input: {
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: theme.cardBackground,
-      color: theme.text,
       borderWidth: 1,
       borderColor: theme.border,
       borderRadius: 2,
       paddingHorizontal: 12,
+      marginTop: 12,
+    },
+    input: {
+      flex: 1,
+      color: theme.text,
       paddingVertical: 10,
       fontSize: 16,
+    },
+    clearButton: {
+      marginLeft: 8,
     },
     listContent: {
       padding: 8,
@@ -306,10 +361,11 @@ const getStyles = theme =>
     filterChip: {
       paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 16,
+      borderRadius: 8,
       borderWidth: 1,
       borderColor: theme.border,
       marginRight: 8,
       backgroundColor: theme.background,
+      marginBottom: 4,
     },
   });

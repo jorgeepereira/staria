@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 // import service helpers
-import { createSet, deleteSet as deleteSetService, finishWorkout as finishWorkoutService, getWorkoutWithSets, updateSet as updateSetService, updateWorkoutDuration, updateWorkoutName, updateWorkoutNote } from "@/services/workouts";
+import { createSet, deleteSet as deleteSetService, deleteWorkout as deleteWorkoutService, finishWorkout as finishWorkoutService, getWorkoutWithSets, updateSet as updateSetService, updateWorkoutDuration, updateWorkoutName, updateWorkoutNote } from "@/services/workouts";
 
 /**
  * useActiveWorkout
@@ -297,6 +297,84 @@ export function useActiveWorkout(userId, workoutId) {
     return groups;
   }, [sets]);
 
+  // === 7) Cancel workout ===
+  const cancelWorkout = useCallback(async () => {
+    if (!workoutId) return;
+    await deleteWorkoutService(workoutId);
+    setWorkout(null);
+    setSets([]);
+  }, [workoutId]);
+
+  // === 8) Reorder exercises ===
+  const reorderExercises = useCallback(async (newExerciseOrderIds) => {
+    if (!workoutId) return;
+
+    // We need to update the order of ALL sets based on the new exercise order.
+    // 1. Group current sets by exerciseId (we already have setsByExercise but let's do it from `sets` to be safe/atomic)
+    const groups = {};
+    sets.forEach(s => {
+      if (!groups[s.exerciseId]) groups[s.exerciseId] = [];
+      groups[s.exerciseId].push(s);
+    });
+
+    // Sort sets within each group by their existing order to maintain relative order
+    Object.keys(groups).forEach(k => {
+      groups[k].sort((a, b) => a.order - b.order);
+    });
+
+    const newSets = [];
+    const updates = [];
+    let currentOrder = 1;
+
+    // 2. Iterate through the new exercise order
+    for (const exId of newExerciseOrderIds) {
+      const groupSets = groups[exId] || [];
+      for (const set of groupSets) {
+        if (set.order !== currentOrder) {
+          updates.push({ setId: set.$id, order: currentOrder });
+          newSets.push({ ...set, order: currentOrder });
+        } else {
+          newSets.push(set);
+        }
+        currentOrder++;
+      }
+    }
+
+    // 3. Update local state immediately
+    // We replace the sets with the newSets (which contains updated orders)
+    // We need to make sure we didn't miss any sets (e.g. if newExerciseOrderIds was partial)
+    // But assuming it's complete:
+    setSets(newSets);
+
+    // 4. Update backend
+    try {
+      await Promise.all(updates.map(u => updateSetService(u.setId, { order: u.order })));
+    } catch (e) {
+      console.error("Failed to reorder sets", e);
+      // In a real app, we might want to revert local state or show an error
+    }
+  }, [sets, workoutId]);
+
+  // === 9) Delete all sets for an exercise ===
+  const deleteExerciseFromWorkout = useCallback(async (exerciseId) => {
+    if (!workoutId) return;
+    
+    // Find all sets for this exercise
+    const setsToDelete = sets.filter(s => s.exerciseId === exerciseId);
+    
+    // Optimistically update local state
+    setSets(prev => prev.filter(s => s.exerciseId !== exerciseId));
+
+    try {
+      // Delete from backend
+      await Promise.all(setsToDelete.map(s => deleteSetService(s.$id)));
+    } catch (e) {
+      console.error("Failed to delete exercise sets", e);
+      // Revert on error? Or just let it be.
+      // For now, maybe just log.
+    }
+  }, [sets, workoutId]);
+
   return {
     loading,
     error,
@@ -316,5 +394,8 @@ export function useActiveWorkout(userId, workoutId) {
     updateSet,
     deleteSet,
     finish,
+    cancelWorkout,
+    reorderExercises,
+    deleteExerciseFromWorkout,
   };
 }

@@ -24,8 +24,8 @@ export default function NavGate() {
     } else if ( user && isNewUser && !inOnboardingGroup) {
       // user is logged in but new, and not in onboarding group, redirect to onboarding
       router.replace("/welcome");
-    } else if (user && !isNewUser && !inTabsGroup) {
-      // user is logged in and not new, and not in tabs group, redirect to main app
+    } else if (user && !isNewUser && (inAuthGroup || inOnboardingGroup || segments.length === 0)) {
+      // user is logged in and not new, but in auth/onboarding or root, redirect to main app
       router.replace("/(tabs)");
     }
     }, 100); // a timetout to avoid navigation flashing onboarding screen

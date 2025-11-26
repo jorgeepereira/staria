@@ -1,21 +1,26 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
+import DraggableFlatList from 'react-native-draggable-flatlist';
 
 // themed components
 import ExerciseCard from '@/components/exercise-card';
 import ExercisePicker from '@/components/exercise-picker';
+import HalfScreenModal from '@/components/half-screen-modal';
+import ReorderableExerciseCard from '@/components/reorderable-exercise-card';
 import Spacer from '@/components/spacer.jsx';
 import ThemedButton from '@/components/themed-button.jsx';
 import ThemedLoader from '@/components/themed-loader';
 import ThemedText from '@/components/themed-text.jsx';
 import ThemedView from '@/components/themed-view.jsx';
+import WorkoutSummaryCard from '@/components/workout-summary-card';
 import { darkTheme, lightTheme } from '@/constants/theme.js';
 
 // workout helper functions
 import { useAuth } from '@/contexts/AuthContext';
 import { useActiveWorkout } from '@/hooks/useActiveWorkout';
-import { SimpleLineIcons } from '@expo/vector-icons';
+import { getExerciseById } from '@/services/exercises';
+import { Ionicons, SimpleLineIcons } from '@expo/vector-icons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 
@@ -62,11 +67,17 @@ const ActiveWorkoutScreen = () => {
     finish,
     pause,
     resume,
+    cancelWorkout,
+    reorderExercises,
+    deleteExerciseFromWorkout,
   } = useActiveWorkout(user?.$id, workoutId);
 
   // open picker
   const openExercisePicker = () => setPickerVisible(true);
   const closeExercisePicker = () => setPickerVisible(false);
+
+  // reordering state
+  const [isReordering, setIsReordering] = useState(false);
 
     // inline name editing state
   const [editingName, setEditingName] = useState(false);
@@ -75,6 +86,29 @@ const ActiveWorkoutScreen = () => {
 
   // workout note (saved on finish)
   const [note, setNote] = useState('');
+
+  // summary modal state
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [summaryData, setSummaryData] = useState(null);
+
+  // Refs for exclusive swipe logic
+  const rowRefs = useRef({});
+  const currentOpenRow = useRef(null);
+
+  const handleSwipeableOpen = (exerciseId) => {
+    if (currentOpenRow.current && currentOpenRow.current !== exerciseId) {
+      const prevRow = rowRefs.current[currentOpenRow.current];
+      if (prevRow) {
+        prevRow.close();
+      }
+    }
+    currentOpenRow.current = exerciseId;
+  };
+
+  // Reset note when workoutId changes
+  useEffect(() => {
+    setNote('');
+  }, [workoutId]);
 
   // keep draft in sync when not editing
   useEffect(() => {
@@ -108,6 +142,25 @@ const ActiveWorkoutScreen = () => {
     }
   }
 
+  const handleReorder = ({ data }) => {
+    reorderExercises(data);
+  };
+
+  const handleDeleteExercise = (exerciseId) => {
+    Alert.alert(
+      "Remove Exercise",
+      "Are you sure you want to remove this exercise and all its sets?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: () => deleteExerciseFromWorkout(exerciseId) 
+        }
+      ]
+    );
+  };
+
   // 2. Show loader while fetching
   if (loading) {
     return (
@@ -136,12 +189,61 @@ const ActiveWorkoutScreen = () => {
     try {
       const safeName = String(workout?.workoutName ?? 'My Workout').slice(0, 24);
       await finish(safeName, note);
-      router.replace('(tabs)');
+      
+      // Prepare data for summary card
+      const exerciseIds = Object.keys(setsByExercise);
+      const exercisePromises = exerciseIds.map(id => getExerciseById(id));
+      const exercisesDocs = await Promise.all(exercisePromises);
+      
+      const exercisesMap = {};
+      exercisesDocs.forEach(doc => {
+        exercisesMap[doc.$id] = doc;
+      });
+
+      const summaryExercises = exerciseIds.map(id => ({
+        name: exercisesMap[id]?.name || 'Unknown Exercise',
+        targetMuscle: exercisesMap[id]?.targetMuscle,
+        sets: setsByExercise[id]
+      }));
+
+      const data = {
+        name: safeName,
+        date: workout.startedAt,
+        duration: formatDuration(durationSec),
+        exercises: summaryExercises
+      };
+
+      setSummaryData(data);
+      setShowSummaryModal(true);
     } catch (error) {
       console.log('Failed to finish workout', error);
     }
   }
 
+
+  // Handle cancel workout
+  const handleCancelWorkout = () => {
+    Alert.alert(
+      "Cancel Workout",
+      "Are you sure you want to cancel? This workout will be deleted and cannot be recovered.",
+      [
+        { text: "No", style: "cancel" },
+        { 
+          text: "Yes, Cancel", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await cancelWorkout();
+              router.replace('(tabs)');
+            } catch (error) {
+              console.error('Failed to cancel workout', error);
+              Alert.alert("Error", "Failed to cancel workout");
+            }
+          }
+        }
+      ]
+    );
+  };
 
   // track scroll to toggle stuck state once header has been scrolled past
   const handleScroll = (e) => {
@@ -188,7 +290,7 @@ const ActiveWorkoutScreen = () => {
                     <MaterialCommunityIcons 
                       name={pressed ? "plus-box" : "plus"}
                       size={32}
-                      color={theme.accent}
+                      color={theme.text}
                     />
                   )}
                 </Pressable>
@@ -262,11 +364,19 @@ const ActiveWorkoutScreen = () => {
               {exerciseIds.map((exerciseId) => (
                 <ExerciseCard
                   key={exerciseId}
+                  ref={(r) => {
+                    if (r) {
+                      rowRefs.current[exerciseId] = r;
+                    }
+                  }}
                   exerciseId={exerciseId}
                   sets={setsByExercise[exerciseId]}
                   onAddSet={addSet}
                   onRemoveSet={deleteSet}
                   onUpdateSet={updateSet}
+                  onLongPress={() => setIsReordering(true)}
+                  onDeleteExercise={handleDeleteExercise}
+                  onSwipeableOpen={() => handleSwipeableOpen(exerciseId)}
                 />
               ))}
             </>
@@ -284,7 +394,47 @@ const ActiveWorkoutScreen = () => {
 
           <Spacer height={32} />
 
+          <ThemedButton 
+            style={styles.cancelButton} 
+            onPress={handleCancelWorkout}
+          >
+            <ThemedText style={{ color: theme.error, fontWeight: '600' }}>Cancel Workout</ThemedText>
+          </ThemedButton>
+
+          <Spacer height={40} />
+
         </ScrollView>
+
+        <HalfScreenModal
+          visible={isReordering}
+          onClose={() => setIsReordering(false)}
+          height="70%"
+        >
+          <View style={{ flex: 1, width: '100%' }}>
+            <View style={styles.reorderHeader}>
+              <ThemedText heading style={styles.reorderTitle}>Reorder Exercises</ThemedText>
+              <Pressable 
+                onPress={() => setIsReordering(false)}
+                hitSlop={20}
+              >
+                <Ionicons name="checkmark-done-sharp" size={24} color={theme.success} />
+              </Pressable>
+            </View>
+            <DraggableFlatList
+              data={exerciseIds}
+              onDragEnd={handleReorder}
+              keyExtractor={(item) => item}
+              renderItem={({ item, drag, isActive }) => (
+                <ReorderableExerciseCard
+                  exerciseId={item}
+                  drag={drag}
+                  isActive={isActive}
+                />
+              )}
+              contentContainerStyle={styles.reorderListContent}
+            />
+          </View>
+        </HalfScreenModal>
 
         <ExercisePicker
           visible={pickerVisible}
@@ -292,6 +442,23 @@ const ActiveWorkoutScreen = () => {
           onSelect={handleSelectExercise}
           onClose={closeExercisePicker}
         />
+
+        <Modal
+          visible={showSummaryModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => router.replace('(tabs)')}
+        >
+          <Pressable 
+            style={styles.modalOverlay} 
+            onPress={() => { router.replace('(tabs)'); setShowSummaryModal(false); }}
+          >
+            <View style={styles.summaryCardContainer}>
+              <WorkoutSummaryCard workout={summaryData} />
+              <ThemedText style={{marginTop: 20, textAlign: 'center'}} secondary>Tap anywhere to continue</ThemedText>
+            </View>
+          </Pressable>
+        </Modal>
       </ThemedView>
     </KeyboardAvoidingView>
   )
@@ -402,5 +569,48 @@ const getStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.success,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  summaryCardContainer: {
+    width: '100%',
+  },
+  cancelButton: {
+    marginHorizontal: 16,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: theme.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  reorderHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  reorderTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: theme.text,
+  },
+  doneButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.primary,
+  },
+  reorderListContent: {
+    paddingBottom: 40,
+    paddingTop: 40,
   },
 })

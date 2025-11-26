@@ -24,6 +24,7 @@ export default function ExerciseTypeChip({ type, onPress, style, textStyle, comp
     machine: '#f59e0b',  // amber-500
     bodyweight: '#ec4899',      // pink-500
     cable: '#a855f7',      // purple-500
+    smith: '#22d3ee',      // cyan-400
     other: '#64748b',    // slate-500
   };
 

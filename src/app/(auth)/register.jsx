@@ -154,7 +154,7 @@ const getStyles = (theme) => StyleSheet.create({
     borderBottomColor: theme.text,
   },
   heading: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
     marginBottom: 6,
   },

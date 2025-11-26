@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, useColorScheme } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 
 
 import { darkTheme, lightTheme } from '@/constants/theme.js';
@@ -26,18 +27,29 @@ import ThemedView from './themed-view.jsx';
  *  - Talk to Appwrite for sets (those are passed in as props)
  *  - Manage workout-level state (that belongs to the ActiveWorkout hook/screen)
  */
-export default function ExerciseCard({
+const ExerciseCard = forwardRef(({
   exerciseId,
   sets,
   onAddSet,
   onUpdateSet,
   onRemoveSet,
-}) {
+  onLongPress, // Add this prop
+  onDeleteExercise, // Add this prop
+  onSwipeableOpen, // Add this prop
+}, ref) => {
 
   // theme logic
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const styles = getStyles(theme);
+
+  const swipeableRef = useRef(null);
+
+  useImperativeHandle(ref, () => ({
+    close: () => {
+      swipeableRef.current?.close();
+    }
+  }));
 
   
   // Local state for exercise details (name, targetMuscle, etc.)
@@ -85,12 +97,36 @@ export default function ExerciseCard({
   const targetMuscle = exercise?.targetMuscle ?? '';
   const typeUpperCase = (exercise?.type ?? '').toUpperCase();
 
+  const renderRightActions = (progress, dragX) => {
+    return (
+      <View style={styles.deleteActionContainer}>
+        <Pressable 
+          style={styles.deleteActionButton}
+          onPress={() => onDeleteExercise?.(exerciseId)}
+        >
+          <MaterialIcons name="delete-outline" size={32} color="white" />
+        </Pressable>
+      </View>
+    );
+  };
+
   return (
+    <Swipeable
+      ref={swipeableRef}
+      renderRightActions={renderRightActions}
+      overshootRight={false}
+      onSwipeableWillOpen={onSwipeableOpen}
+      onSwipeableOpenStartDrag={onSwipeableOpen}
+    >
     <ThemedView style={styles.card}>
       {/* Header: Exercise name + target muscle */}
-      <View style={styles.headerRow}>
+      <Pressable 
+        style={styles.headerRow}
+        onLongPress={onLongPress} // Use it here
+        delayLongPress={300}
+      >
         
-        <ThemedView style={{ backgroundColor: 'transparent' }}>
+        <ThemedView style={{ backgroundColor: 'transparent', flex: 1, paddingRight: 8 }}>
           <ThemedText style={styles.title}>{name}</ThemedText>
           <ThemedText secondary style={styles.subtitle}>{typeUpperCase}</ThemedText>
         </ThemedView>
@@ -111,7 +147,7 @@ export default function ExerciseCard({
             Loading...
           </ThemedText>
         )}
-      </View>
+      </Pressable>
 
 
       <Spacer height={8} />
@@ -167,8 +203,11 @@ export default function ExerciseCard({
       <Spacer height={8} />
       
     </ThemedView>
+    </Swipeable>
   );
-}
+});
+
+export default ExerciseCard;
 
 const getStyles = (theme) => StyleSheet.create({
   card: {
@@ -225,5 +264,18 @@ const getStyles = (theme) => StyleSheet.create({
     marginTop: 4,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  deleteActionContainer: {
+    marginBottom: 16,
+    backgroundColor: theme.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100, // Width of the swipe action area
+  },
+  deleteActionButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
 });

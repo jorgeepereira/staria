@@ -104,6 +104,7 @@ const getStyles = (theme) => StyleSheet.create({
   },
   btnContainer: {
     marginTop: 20,
+    marginBottom: 20,
     alignItems: 'center',
   },
   button: {

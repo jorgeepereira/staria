@@ -3,6 +3,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { useFonts } from "expo-font";
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from "react";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,8 +25,10 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <NavGate />
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <NavGate />
+      </AuthProvider>
+    </GestureHandlerRootView>
   )
 }
