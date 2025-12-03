@@ -28,7 +28,6 @@ export async function createProfile(userId, data) {
     userId,
     {
       displayName: data.displayName ?? '',
-      avatarUrl: data.avatarUrl ?? null,
       units: data.units ?? 'imperial',
       height: data.height ?? null,
       weight: data.weight ?? null,
